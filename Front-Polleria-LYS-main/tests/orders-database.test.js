@@ -18,11 +18,14 @@ beforeAll(async () => {
     CREATE TABLE auth.users(id uuid PRIMARY KEY);
     CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     GRANT USAGE ON SCHEMA auth,public TO authenticated,anon;`)
-  for (const directory of [new URL('../../insforge/migrations/',import.meta.url),new URL('../../migrations/',import.meta.url)]) {
-    for (const name of (await readdir(directory)).filter(name => name.endsWith('.sql')).sort()) await db.exec(await readFile(new URL(name,directory),'utf8'))
-  }
+  const original = new URL('../../insforge/migrations/',import.meta.url)
+  for (const name of (await readdir(original)).filter(name => name.endsWith('.sql')).sort()) await db.exec(await readFile(new URL(name,original),'utf8'))
   await db.query('INSERT INTO auth.users VALUES ($1),($2),($3)',[alice,bob,staff])
   await db.query("INSERT INTO perfiles(id,rol) VALUES ($1,'cliente'),($2,'cliente'),($3,'mesera')",[alice,bob,staff])
+  await asUser(alice,`SELECT crear_pedido_cliente('LS-anterior','delivery','{}','[{"producto_id":1,"cantidad":1}]')`)
+  const additions = new URL('../../migrations/',import.meta.url)
+  for (const name of (await readdir(additions)).filter(name => name.endsWith('.sql')).sort()) await db.exec(await readFile(new URL(name,additions),'utf8'))
+
 },30000)
 afterAll(() => db.close())
 test('delivery conserva precios, nombre vendido, envío y total calculados en servidor',async () => {
@@ -101,4 +104,11 @@ test('un visitante o personal no ejecuta la confirmación del cliente',async () 
   await db.exec('SET ROLE anon')
   try { await expect(db.query("SELECT crear_pedido_cliente('LS-anon','recojo','{}','[]')")).rejects.toThrow(/permission denied/) }
   finally { await db.exec('RESET ROLE') }
+})
+
+test('migrar conserva los pedidos anteriores y agrega importes y un estado conocido',async () => {
+  const row=(await db.query("SELECT subtotal,envio,total FROM pedidos WHERE codigo='LS-anterior'")).rows[0]
+  expect(Number(row.total)).toBe(48.9)
+  const history=(await db.query("SELECT h.estado_id,h.cambiado_por FROM historial_estados_pedido h JOIN pedidos p ON p.id=h.pedido_id WHERE p.codigo='LS-anterior'")).rows
+  expect(history).toEqual([{estado_id:'recibido',cambiado_por:null}])
 })
