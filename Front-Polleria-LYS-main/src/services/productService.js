@@ -9,6 +9,15 @@ export function filterProducts(products, { category = 'todos', search = '' } = {
 }
 import { insforge, configurationError } from '../lib/insforge'
 
+const PRODUCT_COLUMNS = 'id,categoria_id,nombre,descripcion,imagen,precio,disponible'
+
+function productFromRow(row) {
+  return {
+    id: Number(row.id), category: row.categoria_id, name: row.nombre,
+    desc: row.descripcion, image: row.imagen, price: Number(row.precio), available: row.disponible,
+  }
+}
+
 function database() {
   if (configurationError) throw new Error(configurationError)
   return insforge.database
@@ -29,6 +38,16 @@ export async function getCategories() {
       id: row.id, label: row.nombre, desc: row.descripcion, image: row.imagen,
     })))
     if (rows.length < 100) return categories
+  }
+}
+
+export async function getProducts() {
+  const products = []
+  for (let from = 0; ; from += 100) {
+    const rows = unwrap(await database().from('productos')
+      .select(PRODUCT_COLUMNS).order('id').range(from, from + 99)) || []
+    products.push(...rows.map(productFromRow))
+    if (rows.length < 100) return products
   }
 }
 
