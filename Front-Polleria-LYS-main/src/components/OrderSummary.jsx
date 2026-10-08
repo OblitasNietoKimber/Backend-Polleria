@@ -1,4 +1,4 @@
-export default function OrderSummary({ items, subtotal, shipping, total, deliveryType, form, payment, cardReceipt, money, onBack, onConfirm }) {
+export default function OrderSummary({ items, subtotal, shipping, total, deliveryType, form, payment, cardReceipt, money, onBack, onConfirm, saving = false }) {
   return (
     <div>
       <h2 className="font-display checkout-form-title">Resumen de tu compra</h2>
@@ -46,8 +46,8 @@ export default function OrderSummary({ items, subtotal, shipping, total, deliver
         <button className="btn-outline checkout-actions-back" onClick={onBack}>
           Atrás
         </button>
-        <button className="btn-ember checkout-actions-primary" onClick={onConfirm}>
-          Confirmar pedido
+        <button className="btn-ember checkout-actions-primary" onClick={onConfirm} disabled={saving || items.length === 0}>
+          {saving ? 'Guardando pedido...' : 'Confirmar pedido'}
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import CheckoutSteps from '../../components/CheckoutSteps'
@@ -9,6 +9,8 @@ import '../../styles/compras.css'
 
 export default function ResumenPage() {
   const navigate = useNavigate()
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
   const { cartItems, subtotal, shipping, total, deliveryType, form, payment, cardReceipt, confirmOrder } = useCart()
 
   // Si eligió tarjeta pero no completó el cobro (por ejemplo, llegó por atrás
@@ -20,9 +22,12 @@ export default function ResumenPage() {
     }
   }, [payment, cardReceipt, navigate])
 
-  function handleConfirm() {
-    confirmOrder()
-    navigate('/confirmacion')
+  async function handleConfirm() {
+    if (saving) return
+    setSaving(true); setError('')
+    try { await confirmOrder(); navigate('/confirmacion') }
+    catch (error) { setError(error.message) }
+    finally { setSaving(false) }
   }
 
   return (
@@ -36,7 +41,9 @@ export default function ResumenPage() {
 
       <CheckoutSteps step={3} />
 
+      {error && <p role="alert">{error}</p>}
       <OrderSummary
+        saving={saving}
         items={cartItems}
         subtotal={subtotal}
         shipping={shipping}
