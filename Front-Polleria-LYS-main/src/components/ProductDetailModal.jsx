@@ -9,7 +9,7 @@ export default function ProductDetailModal({ product, onClose }) {
   if (!product) return null
 
   function handleAdd() {
-    addToCart(product.id)
+    addToCart(product)
     onClose()
   }
 
