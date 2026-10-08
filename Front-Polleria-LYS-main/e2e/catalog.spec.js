@@ -47,3 +47,14 @@ test('muestra los campos persistidos y bloquea agregar un producto agotado', asy
   await expect(page.locator('.cart-drawer-item-name')).toHaveText('Plato del servidor')
   await expect(page.locator('.cart-drawer-subtotal')).toContainText('21.50')
 })
+
+test('consulta el detalle directamente por ID y muestra sus campos', async ({ page }) => {
+  const calls = await mockCatalog(page)
+  await page.goto('/catalogo?producto=101')
+  await expect(page.locator('.product-modal-title')).toHaveText('Plato del servidor')
+  await expect(page.locator('.product-modal-desc')).toHaveText('Descripción persistida')
+  await expect(page.locator('.product-modal-price')).toContainText('21.50')
+  expect(calls.some(url => url.searchParams.get('id') === 'eq.101')).toBe(true)
+  await page.getByRole('button', { name: 'Cerrar detalle del producto' }).click()
+  await expect(page.locator('.product-modal-title')).toHaveCount(0)
+})

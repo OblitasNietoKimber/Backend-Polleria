@@ -1,7 +1,7 @@
 import { Search } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { useCatalogResource } from '../hooks/useCatalogResource'
-import { filterProducts, getCategories, getProducts } from '../services/productService'
+import { filterProducts, getCategories, getProducts, getProduct } from '../services/productService'
 import ProductCard from '../components/ProductCard'
 import ProductDetailModal from '../components/ProductDetailModal'
 import '../styles/catalogo.css'
@@ -15,11 +15,11 @@ export default function CatalogoPage() {
   const activeCategory = searchParams.get('categoria') || 'todos'
   const search = searchParams.get('buscar') || ''
   const selectedProductId = searchParams.get('producto')
+  const loadDetail = useCallback(() => selectedProductId ? getProduct(selectedProductId) : Promise.resolve(null), [selectedProductId])
+  const detailResource = useCatalogResource(loadDetail, `producto:${selectedProductId || ''}`)
 
   const filteredProducts = filterProducts(products, { category: activeCategory, search })
-  const selectedProduct = selectedProductId
-    ? products.find((product) => product.id === Number(selectedProductId))
-    : null
+  const selectedProduct = detailResource.data
 
   function updateParams(next) {
     const params = new URLSearchParams(searchParams)
@@ -91,3 +91,4 @@ export default function CatalogoPage() {
     </section>
   )
 }
+import { useCallback } from 'react'
