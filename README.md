@@ -12,6 +12,8 @@ cp .env.example .env.local
 
 Completar `VITE_INSFORGE_ANON_KEY` con la clave anónima pública del proyecto. Obtenerla desde InsForge: Install → API Keys, o con el MCP `get-anon-key`. Nunca usar la API key administrativa en una variable `VITE_`.
 
+El archivo `.env.local` se crea dentro de `Front-Polleria-LYS-main`, junto a `package.json`. No se descarga desde GitHub porque está excluido de Git. Después de crearlo o cambiar sus valores, reiniciar `npm run dev`. Si falta la configuración o es inválida, la aplicación muestra las instrucciones necesarias en pantalla.
+
 ```bash
 npm run dev
 npm test

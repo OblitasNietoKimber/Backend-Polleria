@@ -1,4 +1,4 @@
-import { insforge } from '../lib/insforge';
+import { insforge, configurationError } from '../lib/insforge';
 
 let snapshot = { user: null, loading: true, error: '' };
 let initialized;
@@ -47,6 +47,7 @@ async function loadProfile(user) {
 export async function restoreSession() {
   const current = ++generation;
   try {
+    if (configurationError) throw new Error(configurationError);
     const result = await insforge.auth.getCurrentUser();
     // Un navegador sin cookie de sesión recibe 401; debe poder abrir el login.
     const data = result.error?.statusCode === 401 ? { user: null } : unwrap(result);
@@ -60,8 +61,17 @@ export async function restoreSession() {
 }
 export function initializeAuth() {
   if (!initialized) {
+    if (configurationError) {
+      publish({ user: null, loading: false, error: configurationError });
+      initialized = Promise.resolve(null);
+      return initialized;
+    }
     // Retira credenciales y sesiones del prototipo; nunca se importan como cuentas reales.
-    ['lys_users', 'lys_session', 'lys_reset_requests'].forEach((key) => localStorage.removeItem(key));
+    try {
+      ['lys_users', 'lys_session', 'lys_reset_requests'].forEach((key) => localStorage.removeItem(key));
+    } catch {
+      // Un navegador que bloquea localStorage aún debe poder mostrar el login.
+    }
     insforge.auth.onAuthStateChange((event) => {
       if (event === 'signedOut') { generation++; publish({ user: null, loading: false }); }
       else if (event === 'tokenRefreshed') { void restoreSession().catch(() => {}); }

@@ -1,6 +1,6 @@
 # Revisión de autenticación y configuración
 
-Rama local: `feature/login-auth`, creada desde `dev` (`bc692f1`). No se ha hecho push ni se ha creado un pull request.
+Rama: `feature/login-auth`, creada desde `dev` (`bc692f1`).
 
 ## Cambios
 
@@ -33,6 +33,8 @@ El script de configuración utiliza la API administrativa oficial y conserva los
 
 ## Validación
 
+Corrección posterior de arranque: la falta de `.env.local`, una clave administrativa o una URL inválida ahora muestran instrucciones en React, sin lanzar errores durante los imports. La limpieza de cuentas de prototipo tolera que el navegador bloquee `localStorage`. La corrección pasó 23 pruebas, incluida la representación del mensaje de configuración, la compilación y ESLint de los archivos modificados. La prueba de representación usa React en Node; no sustituye las pruebas Playwright pendientes.
+
 - Compilación de producción: correcta.
 - Pruebas automatizadas de servicios y PostgreSQL: 18 correctas. Cubren acceso entre cuentas, elevación de privilegios, permisos por rol, recuperación, precios del servidor y reversión de pedidos inválidos.
 - ESLint de los archivos de autenticación, pedidos y pruebas: correcto.
@@ -48,7 +50,7 @@ La operación completa de mesas, cocina y caja conserva servicios de prototipo d
 
 Durante la verificación pendiente, nombre, apellido y teléfono se conservan temporalmente en `sessionStorage`, sin contraseña ni rol. Después de verificar en el mismo navegador se guardan en el perfil de PostgreSQL. Si se inicia sesión desde otro navegador antes de completar ese proceso, se debe completar el teléfono desde el perfil.
 
-## Commits previstos
+## Organización de commits
 
 1. Configurar el cliente compartido de InsForge
 2. Crear las tablas PostgreSQL de la pollería
@@ -62,3 +64,5 @@ Durante la verificación pendiente, nombre, apellido y teléfono se conservan te
 10. Vincular los pedidos a la cuenta del cliente
 11. Verificar autenticación y permisos con pruebas automatizadas
 12. Documentar la configuración y revisión de autenticación
+
+13. Mostrar instrucciones cuando falta la configuración de InsForge

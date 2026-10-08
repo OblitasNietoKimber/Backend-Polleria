@@ -1,6 +1,6 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 const fake = vi.hoisted(() => ({ auth: {}, database: { from: vi.fn() } }));
-vi.mock('../src/lib/insforge', () => ({ insforge: fake }));
+vi.mock('../src/lib/insforge', () => ({ insforge: fake, configurationError: '' }));
 let service;
 let profile;
 let writes;
@@ -43,6 +43,11 @@ test('restaura el perfil del servidor y elimina las cuentas simuladas', async ()
   await service.initializeAuth();
   expect(service.getCurrentUser().rol).toBe('cliente');
   expect(localStorage.removeItem).toHaveBeenCalledWith('lys_users');
+});
+test('permite arrancar si el navegador bloquea localStorage', async () => {
+  localStorage.removeItem.mockImplementation(() => { throw new Error('Storage bloqueado'); });
+  await service.initializeAuth();
+  expect(service.getSnapshot()).toMatchObject({ loading: false, error: '' });
 });
 test('registra sin guardar contraseña ni aceptar roles del formulario', async () => {
   await service.register({ nombre: ' Ana ', apellido: ' Torres ', telefono: '987654321', email: ' ANA@example.test ', password: 'Secret123', rol: 'admin' });
