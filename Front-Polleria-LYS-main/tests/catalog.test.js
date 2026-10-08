@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest'
 const fake = vi.hoisted(() => ({ from: vi.fn(), currentUser: vi.fn() }))
 vi.mock('../src/lib/insforge', () => ({ insforge: { database: { from: fake.from }, auth: { getCurrentUser: fake.currentUser } }, configurationError: '' }))
-import { getCategories, getProducts, getProduct, createProduct } from '../src/services/productService'
+import { getCategories, getProducts, getProduct, createProduct, updateProduct } from '../src/services/productService'
 
 let requests
 let responses
@@ -20,6 +20,7 @@ beforeEach(() => {
       maybeSingle: () => Promise.resolve(responses.shift()),
       single: () => Promise.resolve(responses.shift()),
       insert: rows => { request.insert = rows; return query },
+      update: values => { request.update = values; return query },
       range: (from, to) => { request.range = [from, to]; return Promise.resolve(responses.shift()) },
     }
     return query
@@ -128,4 +129,29 @@ test('no oculta una denegación de RLS aunque la comprobación previa permita al
   fake.currentUser.mockResolvedValue({ data: { user: { id: 'admin-id' } } })
   responses.push({ data: { rol: 'admin' } }, { data: null, error: { message: 'new row violates row-level security policy' } })
   await expect(createProduct(validProduct)).rejects.toThrow('row-level security')
+})
+
+test('el Administrador edita únicamente el producto solicitado', async () => {
+  fake.currentUser.mockResolvedValue({ data: { user: { id: 'admin-id' } } })
+  responses.push({ data: { rol: 'admin' } }, { data: { id: 18, nombre: 'Pollo nuevo', precio: '24.50', disponible: false } })
+  expect(await updateProduct('18', validProduct)).toMatchObject({ id: 18, price: 24.5, available: false })
+  expect(requests[1]).toMatchObject({ table: 'productos', eq: ['id', 18], update: { nombre: 'Pollo nuevo', disponible: false } })
+  expect(requests[1].update.id).toBeUndefined()
+})
+
+test('rechaza ediciones inválidas, sin sesión y con un rol insuficiente', async () => {
+  await expect(updateProduct('', validProduct)).rejects.toThrow('identificador')
+  await expect(updateProduct(18, { ...validProduct, price: -1 })).rejects.toThrow('precio')
+  expect(requests).toHaveLength(0)
+  await expect(updateProduct(18, validProduct)).rejects.toThrow('iniciar sesión')
+  fake.currentUser.mockResolvedValue({ data: { user: { id: 'cliente' } } })
+  responses.push({ data: { rol: 'cliente' } })
+  await expect(updateProduct(18, validProduct)).rejects.toThrow('Solo el Administrador')
+  expect(requests.every(request => !request.update)).toBe(true)
+})
+
+test('propaga los errores al editar un producto inexistente o denegado por PostgreSQL', async () => {
+  fake.currentUser.mockResolvedValue({ data: { user: { id: 'admin-id' } } })
+  responses.push({ data: { rol: 'admin' } }, { error: { message: 'No rows found' } })
+  await expect(updateProduct(999, validProduct)).rejects.toThrow('No rows found')
 })

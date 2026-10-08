@@ -99,3 +99,10 @@ export async function createProduct(product) {
     .select(PRODUCT_COLUMNS).single()))
 }
 
+export async function updateProduct(value, product) {
+  const id = productId(value)
+  const values = productValues(product)
+  await requireAdministrator()
+  return productFromRow(unwrap(await database().from('productos').update(values)
+    .eq('id', id).select(PRODUCT_COLUMNS).single()))
+}
