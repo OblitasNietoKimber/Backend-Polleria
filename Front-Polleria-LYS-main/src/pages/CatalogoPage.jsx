@@ -1,14 +1,15 @@
 import { Search } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
-import { CATEGORIES } from '../data/categories'
+import { useCatalogResource } from '../hooks/useCatalogResource'
 import { PRODUCTS } from '../data/products'
-import { filterProducts } from '../services/productService'
+import { filterProducts, getCategories } from '../services/productService'
 import ProductCard from '../components/ProductCard'
 import ProductDetailModal from '../components/ProductDetailModal'
 import '../styles/catalogo.css'
 
 export default function CatalogoPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const categoryResource = useCatalogResource(getCategories, 'categorias')
 
   const activeCategory = searchParams.get('categoria') || 'todos'
   const search = searchParams.get('buscar') || ''
@@ -62,7 +63,7 @@ export default function CatalogoPage() {
         >
           Todos
         </button>
-        {CATEGORIES.map((c) => (
+        {(categoryResource.data || []).map((c) => (
           <button
             key={c.id}
             className={`chip ${activeCategory === c.id ? 'active' : ''}`}
