@@ -13,13 +13,17 @@ export default function PedidosPage() {
 
   useEffect(() => {
     let active = true
-    setLoading(true)
-    setError('')
     orderService.getOrders({ page }).then(rows => { if (active) setOrders(rows) })
       .catch(error => { if (active) setError(error.message) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [page])
+
+  function changePage(nextPage) {
+    setLoading(true)
+    setError('')
+    setPage(nextPage)
+  }
 
   return (
     <section className="orders-page">
@@ -46,7 +50,7 @@ export default function PedidosPage() {
         <div className="orders-empty">
           <PackageSearch size={40} strokeWidth={1.4} color="var(--ember)" />
           <p>{page === 0 ? 'Todavía no tienes pedidos.' : 'No hay más pedidos.'}</p>
-          {page > 0 && <button className="btn-ember" onClick={() => setPage(page - 1)}>Volver a la página anterior</button>}
+          {page > 0 && <button className="btn-ember" onClick={() => changePage(page - 1)}>Volver a la página anterior</button>}
           <Link to="/catalogo" className="btn-ember">
             Ver el menú
           </Link>
@@ -55,9 +59,9 @@ export default function PedidosPage() {
         <>
           <OrderHistoryList orders={orders} />
           <nav aria-label="Páginas de pedidos" className="orders-pagination">
-            <button className="btn-ember" disabled={page === 0} onClick={() => setPage(page - 1)}>Anterior</button>
+            <button className="btn-ember" disabled={page === 0} onClick={() => changePage(page - 1)}>Anterior</button>
             <span>Página {page + 1}</span>
-            <button className="btn-ember" disabled={orders.length < ORDER_PAGE_SIZE} onClick={() => setPage(page + 1)}>Siguiente</button>
+            <button className="btn-ember" disabled={orders.length < ORDER_PAGE_SIZE} onClick={() => changePage(page + 1)}>Siguiente</button>
           </nav>
         </>
       )}
