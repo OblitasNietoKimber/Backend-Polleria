@@ -60,6 +60,7 @@ export function CartProvider({ children }) {
   const cartIds = Object.keys(cart).sort().join(',')
   const cartLoading = Boolean(cartIds) && catalogState.ids !== cartIds
   const cartError = catalogState.ids === cartIds ? catalogState.error : ''
+  const missingCartIds = !cartLoading && cartError ? Object.keys(cart).filter(id => !products[id]) : []
   const [cartOpen, setCartOpen] = useState(false)
   const [deliveryType, setDeliveryType] = useState(() => readStoredDelivery().deliveryType)
   const [form, setForm] = useState(() => readStoredDelivery().form)
@@ -173,6 +174,9 @@ export function CartProvider({ children }) {
   }
 
   async function confirmOrder() {
+  if (cartLoading || cartError || !cartItems.length || cartItems.some(item => !item.product.available)) {
+    throw new Error('Revisa los productos y su disponibilidad en el carrito antes de continuar.')
+  }
   const number = generateOrderNumber()
 
   await orderService.createOrder({
@@ -205,6 +209,7 @@ export function CartProvider({ children }) {
   }
 
   const value = {
+    missingCartIds,
     cartLoading,
     cartError,
     cartItems,

@@ -9,8 +9,9 @@ const products = [
   { id: 102, categoria_id: 'otras', nombre: 'Plato agotado', descripcion: 'Temporalmente agotado', imagen: null, precio: '12.00', disponible: false },
 ]
 
-async function mockCatalog(page) {
+async function mockCatalog(page, options = {}) {
   const calls = []
+  let failProducts = Boolean(options.failProducts)
   await page.route('https://mpy5z5dn.us-east.insforge.app/**', async route => {
     const url = new URL(route.request().url())
     calls.push(url)
@@ -21,12 +22,15 @@ async function mockCatalog(page) {
       response = { message: 'No active session', statusCode: 401 }
     } else if (url.pathname.endsWith('/categorias')) response = categories
     else if (url.pathname.endsWith('/productos')) {
+      if (options.beforeProducts) await options.beforeProducts()
+      if (options.delay) await new Promise(resolve => setTimeout(resolve, options.delay))
       const id = url.searchParams.get('id')
       response = id ? products.filter(product => `eq.${product.id}` === id) : products
       const pattern = url.searchParams.get('nombre')
       if (pattern) response = response.filter(product => product.nombre.toLowerCase().includes(pattern.slice(7, -1).toLowerCase()))
       const category = url.searchParams.get('categoria_id')
       if (category) response = response.filter(product => `eq.${product.categoria_id}` === category)
+      if (failProducts) { failProducts = false; status = 400; response = { message: 'No se pudo consultar el catálogo' } }
     }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(response) })
   })
@@ -84,8 +88,30 @@ test('combina el filtro de categoría con la búsqueda persistida', async ({ pag
   await expect(page.locator('.ticket-card')).toHaveCount(1)
   await expect(page.locator('.product-card-name')).toHaveText('Plato del servidor')
   await page.getByRole('textbox', { name: 'Buscar un plato' }).fill('agotado')
-  await expect(page.locator('.ticket-card')).toHaveCount(0)
+  await expect(page.getByText('No encontramos platos que coincidan con tu búsqueda.')).toBeVisible()
   await page.getByRole('button', { name: 'Todos', exact: true }).click()
   await expect(page.locator('.product-card-name')).toHaveText('Plato agotado')
   expect(calls.some(url => url.searchParams.get('categoria_id') === 'eq.especiales' && url.searchParams.get('nombre') === 'ilike.%agotado%')).toBe(true)
+})
+
+test('distingue carga, error y reintento sin usar productos estáticos', async ({ page }) => {
+  let release
+  const pending = new Promise(resolve => { release = resolve })
+  await mockCatalog(page, { failProducts: true, beforeProducts: () => pending })
+  await page.goto('/catalogo', { waitUntil: 'domcontentloaded' })
+  try { await expect(page.getByText('Cargando el menú actualizado...')).toBeVisible() }
+  finally { release() }
+  await expect(page.getByRole('alert')).toContainText('No se pudo consultar el catálogo')
+  await expect(page.locator('.ticket-card')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Reintentar productos' }).click()
+  await expect(page.locator('.ticket-card')).toHaveCount(2)
+})
+
+test('muestra el estado vacío y un detalle retirado', async ({ page }) => {
+  await mockCatalog(page)
+  await page.goto('/catalogo?buscar=inexistente&producto=999')
+  await expect(page.getByText('No encontramos platos que coincidan con tu búsqueda.')).toBeVisible()
+  await expect(page.getByText('Este producto ya no está en el catálogo.')).toBeVisible()
+  await page.getByRole('button', { name: 'Cerrar detalle', exact: true }).click()
+  await expect(page).not.toHaveURL(/producto=/)
 })

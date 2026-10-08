@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { Search } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { useCatalogResource } from '../hooks/useCatalogResource'
@@ -60,6 +61,13 @@ export default function CatalogoPage() {
         </div>
       </div>
 
+      {categoryResource.error && (
+        <div className="catalogo-empty" role="alert">
+          <p>No pudimos cargar las categorías. {categoryResource.error}</p>
+          <button className="btn-outline" onClick={categoryResource.retry}>Reintentar categorías</button>
+        </div>
+      )}
+
       <div className="catalogo-categories">
         <button
           className={`chip ${activeCategory === 'todos' ? 'active' : ''}`}
@@ -80,8 +88,15 @@ export default function CatalogoPage() {
         ))}
       </div>
 
-      {filteredProducts.length === 0 ? (
-        <div className="catalogo-empty">
+      {productResource.loading ? (
+        <div className="catalogo-empty" role="status">Cargando el menú actualizado...</div>
+      ) : productResource.error ? (
+        <div className="catalogo-empty" role="alert">
+          <p>No pudimos cargar el menú. {productResource.error}</p>
+          <button className="btn-outline" onClick={productResource.retry}>Reintentar productos</button>
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="catalogo-empty" role="status">
           No encontramos platos que coincidan con tu búsqueda.
         </div>
       ) : (
@@ -92,8 +107,21 @@ export default function CatalogoPage() {
         </div>
       )}
 
+      {selectedProductId && detailResource.loading && <p role="status">Cargando el detalle del producto...</p>}
+      {selectedProductId && detailResource.error && (
+        <div className="catalogo-empty" role="alert">
+          <p>No pudimos cargar el detalle. {detailResource.error}</p>
+          <button className="btn-outline" onClick={detailResource.retry}>Reintentar detalle</button>
+          <button className="btn-outline" onClick={closeProduct}>Cerrar detalle</button>
+        </div>
+      )}
+      {selectedProductId && !detailResource.loading && !detailResource.error && !selectedProduct && (
+        <div className="catalogo-empty" role="status">
+          <p>Este producto ya no está en el catálogo.</p>
+          <button className="btn-outline" onClick={closeProduct}>Cerrar detalle</button>
+        </div>
+      )}
       <ProductDetailModal product={selectedProduct} onClose={closeProduct} />
     </section>
   )
 }
-import { useCallback } from 'react'

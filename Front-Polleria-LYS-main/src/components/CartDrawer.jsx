@@ -5,7 +5,7 @@ import { money } from '../utils/currency'
 
 export default function CartDrawer() {
   const navigate = useNavigate()
-  const { cartOpen, closeCart, cartItems, removeItem, setQty, subtotal } = useCart()
+  const { cartOpen, closeCart, cartItems, removeItem, setQty, subtotal, cartLoading, cartError, missingCartIds } = useCart()
 
   function handleCheckout() {
     closeCart()
@@ -23,7 +23,10 @@ export default function CartDrawer() {
           </button>
         </div>
         <div className="cart-drawer-body">
-          {cartItems.length === 0 ? (
+          {cartLoading && <p role="status">Actualizando los productos del carrito...</p>}
+          {cartError && <p role="alert">{cartError}</p>}
+          {missingCartIds.map(id => <button key={id} className="btn-outline" onClick={() => removeItem(id)}>Quitar producto {id}</button>)}
+          {cartItems.length === 0 && !cartLoading && !cartError ? (
             <div className="cart-drawer-empty">Aún no agregaste platos.</div>
           ) : (
             cartItems.map(({ product, qty }) => (
@@ -31,12 +34,13 @@ export default function CartDrawer() {
                 <img src={product.image} alt={product.name} className="cart-drawer-item-img" />
                 <div className="cart-drawer-item-info">
                   <div className="cart-drawer-item-name">{product.name}</div>
+                  {!product.available && <p>Producto no disponible</p>}
                   <div className="cart-drawer-item-controls">
                     <button className="qty-btn" onClick={() => setQty(product.id, qty - 1)} aria-label="Reducir cantidad">
                       <Minus size={13} />
                     </button>
                     <span className="font-mono cart-drawer-item-qty">{qty}</span>
-                    <button className="qty-btn" onClick={() => setQty(product.id, qty + 1)} aria-label="Aumentar cantidad">
+                    <button className="qty-btn" disabled={!product.available} onClick={() => setQty(product.id, qty + 1)} aria-label="Aumentar cantidad">
                       <Plus size={13} />
                     </button>
                     <button
@@ -58,7 +62,7 @@ export default function CartDrawer() {
               <span>Subtotal</span>
               <span>{money(subtotal)}</span>
             </div>
-            <button className="btn-ember cart-drawer-checkout-btn" onClick={handleCheckout}>
+            <button className="btn-ember cart-drawer-checkout-btn" disabled={cartLoading || Boolean(cartError) || cartItems.some(item => !item.product.available)} onClick={handleCheckout}>
               Continuar compra
             </button>
           </div>
