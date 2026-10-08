@@ -81,3 +81,16 @@ test('busca en PostgreSQL, recorta espacios y escapa los comodines escritos', as
   await getProducts({ search: '   ' })
   expect(requests[1].ilike).toBeUndefined()
 })
+
+test('combina categoría y búsqueda en todos los lotes de la consulta', async () => {
+  responses.push({ data: Array.from({ length: 100 }, (_, id) => ({ id: id + 1 })) }, { data: [] })
+  await getProducts({ category: 'especiales', search: 'pollo' })
+  expect(requests).toHaveLength(2)
+  for (const request of requests) {
+    expect(request.eq).toEqual(['categoria_id', 'especiales'])
+    expect(request.ilike).toEqual(['nombre', '%pollo%'])
+  }
+  responses.push({ data: [] })
+  await getProducts({ category: 'todos' })
+  expect(requests[2].eq).toBeUndefined()
+})

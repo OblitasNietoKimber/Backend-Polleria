@@ -1,7 +1,7 @@
 import { Search } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { useCatalogResource } from '../hooks/useCatalogResource'
-import { filterProducts, getCategories, getProducts, getProduct } from '../services/productService'
+import { getCategories, getProducts, getProduct } from '../services/productService'
 import ProductCard from '../components/ProductCard'
 import ProductDetailModal from '../components/ProductDetailModal'
 import '../styles/catalogo.css'
@@ -12,19 +12,19 @@ export default function CatalogoPage() {
 
   const activeCategory = searchParams.get('categoria') || 'todos'
   const search = searchParams.get('buscar') || ''
-  const loadProducts = useCallback(() => getProducts({ search }), [search])
-  const productResource = useCatalogResource(loadProducts, `productos:${search}`, 250)
+  const loadProducts = useCallback(() => getProducts({ search, category: activeCategory }), [search, activeCategory])
+  const productResource = useCatalogResource(loadProducts, JSON.stringify([search, activeCategory]), 250)
   const products = productResource.data || []
   const selectedProductId = searchParams.get('producto')
   const loadDetail = useCallback(() => selectedProductId ? getProduct(selectedProductId) : Promise.resolve(null), [selectedProductId])
   const detailResource = useCatalogResource(loadDetail, `producto:${selectedProductId || ''}`)
 
-  const filteredProducts = filterProducts(products, { category: activeCategory })
+  const filteredProducts = products
   const selectedProduct = detailResource.data
 
   function updateParams(next) {
     const params = new URLSearchParams(searchParams)
-    if ('buscar' in next) params.delete('producto')
+    if ('buscar' in next || 'categoria' in next) params.delete('producto')
     Object.entries(next).forEach(([key, value]) => {
       if (!value || value === 'todos') params.delete(key)
       else params.set(key, value)
@@ -63,6 +63,7 @@ export default function CatalogoPage() {
       <div className="catalogo-categories">
         <button
           className={`chip ${activeCategory === 'todos' ? 'active' : ''}`}
+          aria-pressed={activeCategory === 'todos'}
           onClick={() => updateParams({ categoria: 'todos' })}
         >
           Todos
@@ -71,6 +72,7 @@ export default function CatalogoPage() {
           <button
             key={c.id}
             className={`chip ${activeCategory === c.id ? 'active' : ''}`}
+            aria-pressed={activeCategory === c.id}
             onClick={() => updateParams({ categoria: c.id })}
           >
             <img src={c.image} alt="" className="catalogo-chip-icon" /> {c.label}

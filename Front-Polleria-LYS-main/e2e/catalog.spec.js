@@ -1,9 +1,12 @@
 import { test, expect } from '@playwright/test'
 
-const categories = [{ id: 'especiales', nombre: 'Especiales persistidos', descripcion: 'Categoría del servidor', imagen: null }]
+const categories = [
+  { id: 'especiales', nombre: 'Especiales persistidos', descripcion: 'Categoría del servidor', imagen: null },
+  { id: 'otras', nombre: 'Otras categorías', descripcion: '', imagen: null },
+]
 const products = [
   { id: 101, categoria_id: 'especiales', nombre: 'Plato del servidor', descripcion: 'Descripción persistida', imagen: null, precio: '21.50', disponible: true },
-  { id: 102, categoria_id: 'especiales', nombre: 'Plato agotado', descripcion: 'Temporalmente agotado', imagen: null, precio: '12.00', disponible: false },
+  { id: 102, categoria_id: 'otras', nombre: 'Plato agotado', descripcion: 'Temporalmente agotado', imagen: null, precio: '12.00', disponible: false },
 ]
 
 async function mockCatalog(page) {
@@ -22,6 +25,8 @@ async function mockCatalog(page) {
       response = id ? products.filter(product => `eq.${product.id}` === id) : products
       const pattern = url.searchParams.get('nombre')
       if (pattern) response = response.filter(product => product.nombre.toLowerCase().includes(pattern.slice(7, -1).toLowerCase()))
+      const category = url.searchParams.get('categoria_id')
+      if (category) response = response.filter(product => `eq.${product.categoria_id}` === category)
     }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(response) })
   })
@@ -70,4 +75,17 @@ test('la búsqueda consulta al servidor y conserva el texto en la URL', async ({
   await expect(page.locator('.product-card-name')).toHaveText('Plato agotado')
   await expect(page).toHaveURL(/buscar=AGOTADO/)
   expect(calls.some(url => url.searchParams.get('nombre') === 'ilike.%AGOTADO%')).toBe(true)
+})
+
+test('combina el filtro de categoría con la búsqueda persistida', async ({ page }) => {
+  const calls = await mockCatalog(page)
+  await page.goto('/catalogo')
+  await page.getByRole('button', { name: 'Especiales persistidos' }).click()
+  await expect(page.locator('.ticket-card')).toHaveCount(1)
+  await expect(page.locator('.product-card-name')).toHaveText('Plato del servidor')
+  await page.getByRole('textbox', { name: 'Buscar un plato' }).fill('agotado')
+  await expect(page.locator('.ticket-card')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Todos', exact: true }).click()
+  await expect(page.locator('.product-card-name')).toHaveText('Plato agotado')
+  expect(calls.some(url => url.searchParams.get('categoria_id') === 'eq.especiales' && url.searchParams.get('nombre') === 'ilike.%agotado%')).toBe(true)
 })

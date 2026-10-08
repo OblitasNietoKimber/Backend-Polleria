@@ -1,12 +1,3 @@
-export function filterProducts(products, { category = 'todos', search = '' } = {}) {
-  const normalizedSearch = search.trim().toLowerCase()
-
-  return products.filter((product) => {
-    const matchesCategory = category === 'todos' || product.category === category
-    const matchesSearch = product.name.toLowerCase().includes(normalizedSearch)
-    return matchesCategory && matchesSearch
-  })
-}
 import { insforge, configurationError } from '../lib/insforge'
 
 const PRODUCT_COLUMNS = 'id,categoria_id,nombre,descripcion,imagen,precio,disponible'
@@ -41,11 +32,12 @@ export async function getCategories() {
   }
 }
 
-export async function getProducts({ search = '' } = {}) {
+export async function getProducts({ search = '', category = 'todos' } = {}) {
   const term = search.trim()
   const products = []
   for (let from = 0; ; from += 100) {
     let query = database().from('productos').select(PRODUCT_COLUMNS)
+    if (category !== 'todos') query = query.eq('categoria_id', category)
     if (term) query = query.ilike('nombre', `%${term.replace(/[\\%_]/g, '\\$&')}%`)
     const rows = unwrap(await query.order('id').range(from, from + 99)) || []
     products.push(...rows.map(productFromRow))
