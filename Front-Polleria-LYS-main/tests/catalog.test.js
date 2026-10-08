@@ -1,7 +1,7 @@
 import { beforeEach, expect, test, vi } from 'vitest'
 const fake = vi.hoisted(() => ({ from: vi.fn(), user: null }))
 vi.mock('../src/lib/insforge', () => ({ insforge: { database: { from: fake.from } }, configurationError: '' }))
-import { getCategories, getProducts } from '../src/services/productService'
+import { getCategories, getProducts, getProduct } from '../src/services/productService'
 
 let requests
 let responses
@@ -15,6 +15,8 @@ beforeEach(() => {
     const query = {
       select: columns => { request.columns = columns; return query },
       order: column => { request.order = column; return query },
+      eq: (column, value) => { request.eq = [column, value]; return query },
+      maybeSingle: () => Promise.resolve(responses.shift()),
       range: (from, to) => { request.range = [from, to]; return Promise.resolve(responses.shift()) },
     }
     return query
@@ -51,4 +53,21 @@ test('recorre lotes de productos sin limitar el catálogo a los primeros cien', 
   expect(products).toHaveLength(101)
   expect(products.at(-1)).toMatchObject({ id: 101, price: 11 })
   expect(requests[1].range).toEqual([100, 199])
+})
+
+test('consulta un detalle por ID y reconoce un producto retirado', async () => {
+  responses.push({ data: { id: 18, nombre: 'Detalle', precio: '12', disponible: false } })
+  expect(await getProduct('18')).toMatchObject({ id: 18, name: 'Detalle', price: 12, available: false })
+  expect(requests[0].eq).toEqual(['id', 18])
+  responses.push({ data: null })
+  expect(await getProduct(19)).toBeNull()
+})
+
+test('no consulta identificadores inválidos ni oculta errores del detalle', async () => {
+  for (const id of ['abc', -1, 1.5, '', null, '9007199254740992']) {
+    await expect(getProduct(id)).rejects.toThrow('identificador')
+  }
+  expect(requests).toHaveLength(0)
+  responses.push({ data: null, error: { message: 'Error del servidor' } })
+  await expect(getProduct(1)).rejects.toThrow('Error del servidor')
 })

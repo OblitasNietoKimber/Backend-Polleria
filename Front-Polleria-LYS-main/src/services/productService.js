@@ -51,3 +51,18 @@ export async function getProducts() {
   }
 }
 
+function productId(value) {
+  const id = Number(value)
+  if (!/^[1-9]\d*$/.test(String(value)) || !Number.isSafeInteger(id)) {
+    throw new Error('El identificador del producto no es válido.')
+  }
+  return id
+}
+
+export async function getProduct(value) {
+  const id = productId(value)
+  const row = unwrap(await database().from('productos').select(PRODUCT_COLUMNS)
+    .eq('id', id).maybeSingle())
+  return row ? productFromRow(row) : null
+}
+
