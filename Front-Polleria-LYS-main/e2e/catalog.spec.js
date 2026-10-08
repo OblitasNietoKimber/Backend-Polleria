@@ -20,6 +20,8 @@ async function mockCatalog(page) {
     else if (url.pathname.endsWith('/productos')) {
       const id = url.searchParams.get('id')
       response = id ? products.filter(product => `eq.${product.id}` === id) : products
+      const pattern = url.searchParams.get('nombre')
+      if (pattern) response = response.filter(product => product.nombre.toLowerCase().includes(pattern.slice(7, -1).toLowerCase()))
     }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(response) })
   })
@@ -57,4 +59,15 @@ test('consulta el detalle directamente por ID y muestra sus campos', async ({ pa
   expect(calls.some(url => url.searchParams.get('id') === 'eq.101')).toBe(true)
   await page.getByRole('button', { name: 'Cerrar detalle del producto' }).click()
   await expect(page.locator('.product-modal-title')).toHaveCount(0)
+})
+
+test('la búsqueda consulta al servidor y conserva el texto en la URL', async ({ page }) => {
+  const calls = await mockCatalog(page)
+  await page.goto('/catalogo')
+  await expect(page.locator('.ticket-card')).toHaveCount(2)
+  await page.getByRole('textbox', { name: 'Buscar un plato' }).fill('AGOTADO')
+  await expect(page.locator('.ticket-card')).toHaveCount(1)
+  await expect(page.locator('.product-card-name')).toHaveText('Plato agotado')
+  await expect(page).toHaveURL(/buscar=AGOTADO/)
+  expect(calls.some(url => url.searchParams.get('nombre') === 'ilike.%AGOTADO%')).toBe(true)
 })

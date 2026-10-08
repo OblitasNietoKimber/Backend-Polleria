@@ -9,25 +9,27 @@ import '../styles/catalogo.css'
 export default function CatalogoPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryResource = useCatalogResource(getCategories, 'categorias')
-  const productResource = useCatalogResource(getProducts, 'productos')
-  const products = productResource.data || []
 
   const activeCategory = searchParams.get('categoria') || 'todos'
   const search = searchParams.get('buscar') || ''
+  const loadProducts = useCallback(() => getProducts({ search }), [search])
+  const productResource = useCatalogResource(loadProducts, `productos:${search}`, 250)
+  const products = productResource.data || []
   const selectedProductId = searchParams.get('producto')
   const loadDetail = useCallback(() => selectedProductId ? getProduct(selectedProductId) : Promise.resolve(null), [selectedProductId])
   const detailResource = useCatalogResource(loadDetail, `producto:${selectedProductId || ''}`)
 
-  const filteredProducts = filterProducts(products, { category: activeCategory, search })
+  const filteredProducts = filterProducts(products, { category: activeCategory })
   const selectedProduct = detailResource.data
 
   function updateParams(next) {
     const params = new URLSearchParams(searchParams)
+    if ('buscar' in next) params.delete('producto')
     Object.entries(next).forEach(([key, value]) => {
       if (!value || value === 'todos') params.delete(key)
       else params.set(key, value)
     })
-    setSearchParams(params)
+    setSearchParams(params, { replace: 'buscar' in next })
   }
 
   function openProduct(product) {
@@ -51,6 +53,7 @@ export default function CatalogoPage() {
           <input
             className="lys-input catalogo-search-input"
             placeholder="Buscar un plato..."
+            aria-label="Buscar un plato"
             value={search}
             onChange={(event) => updateParams({ buscar: event.target.value })}
           />

@@ -41,11 +41,13 @@ export async function getCategories() {
   }
 }
 
-export async function getProducts() {
+export async function getProducts({ search = '' } = {}) {
+  const term = search.trim()
   const products = []
   for (let from = 0; ; from += 100) {
-    const rows = unwrap(await database().from('productos')
-      .select(PRODUCT_COLUMNS).order('id').range(from, from + 99)) || []
+    let query = database().from('productos').select(PRODUCT_COLUMNS)
+    if (term) query = query.ilike('nombre', `%${term.replace(/[\\%_]/g, '\\$&')}%`)
+    const rows = unwrap(await query.order('id').range(from, from + 99)) || []
     products.push(...rows.map(productFromRow))
     if (rows.length < 100) return products
   }

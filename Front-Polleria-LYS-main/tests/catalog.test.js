@@ -16,6 +16,7 @@ beforeEach(() => {
       select: columns => { request.columns = columns; return query },
       order: column => { request.order = column; return query },
       eq: (column, value) => { request.eq = [column, value]; return query },
+      ilike: (column, value) => { request.ilike = [column, value]; return query },
       maybeSingle: () => Promise.resolve(responses.shift()),
       range: (from, to) => { request.range = [from, to]; return Promise.resolve(responses.shift()) },
     }
@@ -70,4 +71,13 @@ test('no consulta identificadores inválidos ni oculta errores del detalle', asy
   expect(requests).toHaveLength(0)
   responses.push({ data: null, error: { message: 'Error del servidor' } })
   await expect(getProduct(1)).rejects.toThrow('Error del servidor')
+})
+
+test('busca en PostgreSQL, recorta espacios y escapa los comodines escritos', async () => {
+  responses.push({ data: [] })
+  await getProducts({ search: '  Pollo%_  ' })
+  expect(requests[0].ilike).toEqual(['nombre', '%Pollo\\%\\_%'])
+  responses.push({ data: [] })
+  await getProducts({ search: '   ' })
+  expect(requests[1].ilike).toBeUndefined()
 })
