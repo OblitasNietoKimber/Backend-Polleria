@@ -1,14 +1,16 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { DELIVERY_COST } from '../data/products'
 import { getProduct } from '../services/productService'
 import { generateOrderNumber } from '../utils/orderNumber'
 import orderService from '../services/orderService'
+import { getCurrentUser } from '../services/authService'
 
 const CartContext = createContext(null)
 const CART_STORAGE_KEY = 'lys-cart'
 const DELIVERY_STORAGE_KEY = 'lys-checkout-delivery'
 const PAYMENT_STORAGE_KEY = 'lys-checkout-payment'
 const ORDER_STORAGE_KEY = 'lys-order-number'
+const PENDING_ORDER_STORAGE_KEY = 'lys-pending-order'
 
 const EMPTY_FORM = { name: '', address: '', reference: '', phone: '' }
 // Los datos de tarjeta NUNCA se guardan en localStorage (ni completos ni parciales):
@@ -54,6 +56,8 @@ function readStoredOrderNumber() {
 }
 
 export function CartProvider({ children }) {
+  const confirming = useRef(false)
+  const pendingOrder = useRef(null)
   const [cart, setCart] = useState(readStoredCart)
   const [products, setProducts] = useState({})
   const [catalogState, setCatalogState] = useState({ ids: null, error: '' })
@@ -174,31 +178,44 @@ export function CartProvider({ children }) {
   }
 
   async function confirmOrder() {
-  if (cartLoading || cartError || !cartItems.length || cartItems.some(item => !item.product.available)) {
-    throw new Error('Revisa los productos y su disponibilidad en el carrito antes de continuar.')
+    if (confirming.current) throw new Error('Tu pedido se está confirmando. Espera un momento.')
+    if (cartLoading || cartError || !cartItems.length || cartItems.some(item => !item.product.available)) {
+      throw new Error('Revisa los productos y su disponibilidad en el carrito antes de continuar.')
+    }
+    const signature = JSON.stringify({
+      client: getCurrentUser()?.id,
+      items: cartItems.map(({ product, qty }) => [product.id, qty]).sort((a, b) => a[0] - b[0]),
+      deliveryType, form, payment,
+    })
+    if (!pendingOrder.current) {
+      try { pendingOrder.current = JSON.parse(window.localStorage.getItem(PENDING_ORDER_STORAGE_KEY)) }
+      catch { /* El reintento sigue protegido en esta sesión si no hay almacenamiento. */ }
+    }
+    if (pendingOrder.current?.signature !== signature) {
+      pendingOrder.current = { id: generateOrderNumber(), signature }
+      try { window.localStorage.setItem(PENDING_ORDER_STORAGE_KEY, JSON.stringify(pendingOrder.current)) }
+      catch { /* Se conserva en memoria. */ }
+    }
+    confirming.current = true
+    try {
+      const order = await orderService.createOrder({
+        id: pendingOrder.current.id, items: cartItems, deliveryType, form, payment,
+      })
+      setOrderNumber(order.id)
+      setCart({})
+      clearCard()
+      setCardReceipt(null)
+      pendingOrder.current = null
+      try { window.localStorage.removeItem(PENDING_ORDER_STORAGE_KEY) } catch { /* Sin almacenamiento. */ }
+      return order.id
+    } finally {
+      confirming.current = false
+    }
   }
-  const number = generateOrderNumber()
-
-  await orderService.createOrder({
-    id: number,
-    items: cartItems,
-    subtotal,
-    shipping,
-    total,
-    deliveryType,
-    form,
-    payment,
-    paymentReceipt: cardReceipt,
-  })
-
-  setOrderNumber(number)
-  setCart({})
-  clearCard()
-  setCardReceipt(null)
-  return number
-}
 
   function resetAll() {
+    pendingOrder.current = null
+    try { window.localStorage.removeItem(PENDING_ORDER_STORAGE_KEY) } catch { /* Sin almacenamiento. */ }
     setCart({})
     setDeliveryType('delivery')
     setForm(EMPTY_FORM)
