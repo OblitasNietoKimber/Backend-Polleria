@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Check, Copy } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import orderService from '../services/orderService'
+import orderService, { ORDER_STATUS_STEPS } from '../services/orderService'
 import { money } from '../utils/currency'
 import OrderDeliveryInfo from '../components/orders/OrderDeliveryInfo'
 import OrderStatusBadge from '../components/orders/OrderStatusBadge'
@@ -11,17 +11,20 @@ import '../styles/pedidos.css'
 export default function OrderDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [result, setResult] = useState({ id: null, order: null, error: '' })
+  const [revision, setRevision] = useState(0)
+  const [result, setResult] = useState({ id: null, revision: -1, order: null, history: [], error: '' })
   const order = result.id === id ? result.order : null
   useEffect(() => {
     let active = true
-    orderService.getOrderById(id).then(order => { if (active) setResult({ id, order, error: '' }) })
-      .catch(error => { if (active) setResult({ id, order: null, error: error.message }) })
+    orderService.getOrderById(id).then(async order => {
+      const history = order ? await orderService.getOrderHistory(order.databaseId) : []
+      if (active) setResult({ id, revision, order, history, error: '' })
+    }).catch(error => { if (active) setResult({ id, revision, order: null, history: [], error: error.message }) })
     return () => { active = false }
-  }, [id])
+  }, [id, revision])
   const [copied, setCopied] = useState(false)
 
-  if (result.id !== id) return <p role="status">Cargando pedido...</p>
+  if (result.id !== id || result.revision !== revision) return <p role="status">Cargando pedido...</p>
   if (result.error) return <p role="alert">{result.error}</p>
 
   if (!order) {
@@ -99,6 +102,18 @@ export default function OrderDetailPage() {
         </div>
       </div>
       <OrderDeliveryInfo order={order} />
+      <section className="order-items-card" aria-label="Historial de estados">
+        <div className="order-items-card-title font-mono">HISTORIAL DEL PEDIDO</div>
+        <ol className="order-status-history">
+          {result.history.map(entry => (
+            <li key={entry.id}>
+              <strong>{ORDER_STATUS_STEPS.find(step => step.key === entry.estado_id)?.label || (entry.estado_id === 'cancelado' ? 'Cancelado' : entry.estado_id)}</strong>
+              <time dateTime={entry.cambiado_en}>{new Date(entry.cambiado_en).toLocaleString('es-PE')}</time>
+            </li>
+          ))}
+        </ol>
+        <button className="lys-navlink" onClick={() => setRevision(value => value + 1)}>Actualizar pedido e historial</button>
+      </section>
     </section>
   )
 }
