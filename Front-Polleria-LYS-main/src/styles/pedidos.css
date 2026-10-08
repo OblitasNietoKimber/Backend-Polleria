@@ -1,0 +1,360 @@
+/* ============================================
+   EPIC 3 — Gestión de pedidos del cliente
+   ============================================ */
+
+.orders-page {
+  --shadow-soft: 0 4px 14px rgba(27, 21, 18, 0.06);
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 36px 20px 100px;
+}
+
+/* --- Encabezados y navegación --- */
+.orders-page-header { padding-left: 16px; border-left: 3px solid var(--ember); }
+.orders-page-header h1, .order-detail-header h1 { font-weight: 600; margin-bottom: 4px; }
+.orders-page-header h1 { font-size: 1.8rem; margin-bottom: 6px; }
+.order-detail-header h1 { font-size: 1.6rem; }
+.orders-page-header p { color: var(--smoke); margin-bottom: 28px; }
+
+.order-detail-back { display: flex; align-items: center; gap: 6px; color: var(--rust); margin-bottom: 22px; }
+.order-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.order-detail-id { display: flex; align-items: center; gap: 10px; }
+
+.copy-id-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: none;
+  border: 1.5px solid var(--line);
+  border-radius: 4px;
+  color: var(--smoke);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.copy-id-btn:hover { border-color: var(--ember); color: var(--ember); }
+
+/* --- Banner de agradecimiento --- */
+.orders-banner {
+  margin-bottom: 28px;
+  padding: 28px 26px;
+  border-radius: 10px;
+  background: linear-gradient(120deg, var(--char) 0%, #3A2A22 55%, var(--ember) 130%);
+  color: var(--cream);
+}
+
+.orders-banner-eyebrow {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.orders-banner-title {
+  font-size: 1.4rem;
+  line-height: 1.35;
+  font-weight: 600;
+  margin: 0;
+}
+
+.orders-banner-title em {
+  font-style: italic;
+  color: var(--ember);
+}
+
+@media (max-width: 480px) {
+  .orders-banner-title { font-size: 1.15rem; }
+}
+
+/* --- Loading skeleton --- */
+.orders-skeleton { display: flex; flex-direction: column; gap: 12px; }
+.orders-skeleton-card {
+  height: 74px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--paper) 25%, var(--line) 50%, var(--paper) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.3s ease-in-out infinite;
+}
+@keyframes skeleton-pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* --- Estado vacío --- */
+.orders-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--smoke);
+  border: 1.5px dashed var(--gold);
+  border-radius: 6px;
+  background: linear-gradient(180deg, var(--paper) 0%, #FBF3E1 100%);
+}
+.orders-empty svg { animation: empty-float 2.4s ease-in-out infinite; }
+@keyframes empty-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+/* --- Historial de pedidos --- */
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.order-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  animation: order-card-in 0.35s ease both;
+}
+
+.orders-list .order-card:nth-child(1) { animation-delay: 0.03s; }
+.orders-list .order-card:nth-child(2) { animation-delay: 0.08s; }
+.orders-list .order-card:nth-child(3) { animation-delay: 0.13s; }
+.orders-list .order-card:nth-child(4) { animation-delay: 0.18s; }
+.orders-list .order-card:nth-child(5) { animation-delay: 0.23s; }
+@keyframes order-card-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Brillo diagonal al pasar el mouse */
+.order-card::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+.order-card:hover::after { left: 130%; }
+
+.order-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--ember);
+  box-shadow: 0 10px 24px rgba(27, 21, 18, 0.12);
+}
+
+.order-card-icon {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #FCEDE5;
+  color: var(--ember);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.order-card-info {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 110px;
+}
+
+.order-card-id { font-weight: 700; font-size: 0.9rem; color: var(--rust); }
+
+.order-card-date {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--smoke);
+}
+
+.order-card-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+  flex-shrink: 0;
+}
+
+.order-card-product {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.order-card-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--line);
+}
+
+.order-card-product-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.order-card-product-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.order-card-product-extra {
+  font-size: 0.75rem;
+  color: var(--smoke);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.order-card-count-tag {
+  display: inline-block;
+  width: fit-content;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--smoke);
+  background: var(--line);
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-top: 2px;
+}
+
+.order-card-status-col {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 100px;
+}
+
+.order-card-total-label { font-size: 0.72rem; color: var(--smoke); margin-top: 2px; }
+.order-card-total { font-weight: 700; font-size: 1rem; color: var(--ink); }
+
+.order-card-cta {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ember);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .order-card { flex-wrap: wrap; }
+  .order-card-divider { display: none; }
+  .order-card-product { order: 3; width: 100%; }
+  .order-card-status-col { align-items: flex-start; }
+}
+
+/* --- Comanda + info de entrega (detalle del pedido) --- */
+.order-items-card, .delivery-info {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: var(--shadow-soft);
+}
+.order-items-card { overflow: hidden; }
+.delivery-info { margin-top: 20px; padding: 18px; }
+
+.order-items-card-title { padding: 14px 18px; font-size: 0.78rem; letter-spacing: 0.05em; background: var(--char); color: var(--cream); }
+.order-items-card-body { padding: 18px; }
+
+.order-item-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.order-item-row.subtotal { padding: 10px 0 2px; color: var(--smoke); border-bottom: none; }
+.order-item-row.total {
+  margin-top: 8px;
+  padding-top: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--rust);
+  border-top: 1.5px solid var(--ink);
+}
+
+.delivery-info-title { font-size: 1rem; font-weight: 600; margin-bottom: 12px; }
+.delivery-info-row { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: var(--ink); padding: 6px 0; }
+.delivery-info-row svg { flex-shrink: 0; width: 26px !important; height: 26px !important; padding: 5px; border-radius: 50%; background: #FCEDE5; }
+
+/* --- Badge de estado --- */
+.status-badge {
+  --status-bg: #EAE3D8;
+  --status-color: #6B5B3E;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: 999px;
+  background: var(--status-bg);
+  color: var(--status-color);
+}
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+.status-recibido    { --status-bg: #EAE3D8; --status-color: #6B5B3E; }
+.status-preparacion { --status-bg: #FCEDE5; --status-color: var(--ember); }
+.status-listo       { --status-bg: #FBF3E1; --status-color: var(--rust); }
+.status-camino      { --status-bg: #E3EEF7; --status-color: #2B6CA3; }
+.status-entregado   { --status-bg: #E4F3E7; --status-color: #2E7D46; }
+
+/* --- Stepper de estado --- */
+.status-stepper { display: flex; align-items: flex-start; margin-bottom: 26px; padding: 20px 6px; background: var(--paper); border: 1px solid var(--line); }
+.status-stepper-item { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.status-stepper-line-wrap { display: flex; align-items: center; width: 100%; }
+
+.status-stepper-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  color: #fff;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--paper);
+}
+.status-stepper-dot.active {
+  border-color: var(--ember);
+  background: var(--ember);
+  box-shadow: 0 0 0 4px #FCEDE5;
+  animation: stepper-pulse 1.8s ease-in-out infinite;
+}
+@keyframes stepper-pulse { 0%, 100% { box-shadow: 0 0 0 4px #FCEDE5; } 50% { box-shadow: 0 0 0 7px #FCEDE5; } }
+.status-stepper-dot.done { border-color: var(--gold); background: var(--gold); }
+
+.status-stepper-line { flex: 1; height: 2px; background: var(--line); }
+.status-stepper-line.done { background: var(--gold); }
+
+.status-stepper-label { font-size: 0.72rem; color: var(--smoke); margin-top: 8px; }
+.status-stepper-label.active { color: var(--ember); font-weight: 700; }
+
+/* --- Responsive --- */
+@media (max-width: 480px) {
+  .status-stepper-label { font-size: 0.62rem; }
+  .status-stepper-dot { width: 20px; height: 20px; min-width: 20px; }
+  .order-detail-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+}

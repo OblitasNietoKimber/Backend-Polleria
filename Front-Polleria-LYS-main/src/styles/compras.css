@@ -1,0 +1,423 @@
+/* Estilos compartidos del flujo de compra (checkout: Entrega, Pago, Resumen). */
+
+.checkout-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 36px 20px 100px;
+}
+
+.checkout-back-link {
+  color: var(--rust);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 22px;
+}
+
+/* Elementos compartidos entre los formularios del checkout
+   (Entrega, Pago, Resumen) */
+
+.checkout-form-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+
+.checkout-field-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.checkout-field-error {
+  display: block;
+  color: #B23A2E;
+  font-size: 0.75rem;
+}
+
+.checkout-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 26px;
+}
+
+.checkout-actions-back {
+  flex: 1;
+}
+
+.checkout-actions-primary {
+  flex: 2;
+}
+
+/* Pasos del checkout (CheckoutSteps) */
+
+.checkout-steps {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+
+/* Formulario de entrega (DeliveryForm) */
+
+.delivery-type-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.chip.delivery-type-chip {
+  padding: 12px 18px;
+  font-size: 0.88rem;
+}
+
+.delivery-form-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.btn-ember.checkout-submit-btn {
+  margin-top: 26px;
+  width: 100%;
+}
+
+/* Método de pago (PaymentMethod) */
+
+.payment-methods-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.payment-method-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  padding: 16px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  transition: all 0.15s ease;
+}
+
+.payment-method-option.active {
+  border-color: var(--ember);
+  background: #FCEDE5;
+}
+
+.payment-method-info-title {
+  font-weight: 600;
+}
+
+.payment-method-info-desc {
+  font-size: 0.8rem;
+  color: var(--smoke);
+}
+
+/* Resumen de compra (OrderSummary) */
+
+.order-ticket {
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.order-ticket-header {
+  background: var(--char);
+  color: var(--cream);
+  padding: 14px 18px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+}
+
+.order-ticket-body {
+  padding: 18px;
+}
+
+.order-ticket-line {
+  font-family: 'IBM Plex Mono', monospace;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.order-ticket-summary-row {
+  font-family: 'IBM Plex Mono', monospace;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 4px 0;
+}
+
+.order-ticket-summary-row:first-of-type {
+  padding: 10px 0 4px;
+}
+
+.order-ticket-summary-row span:first-child {
+  color: var(--smoke);
+}
+
+.order-ticket-total {
+  font-family: 'IBM Plex Mono', monospace;
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 12px 0 0;
+  border-top: 1.5px solid var(--ink);
+  margin-top: 8px;
+  color: var(--rust);
+}
+
+.order-details {
+  margin-top: 18px;
+  font-size: 0.85rem;
+  color: var(--smoke);
+  line-height: 1.7;
+}
+
+.order-details strong {
+  color: var(--ink);
+}
+
+/* Carrito lateral (CartDrawer) */
+
+.cart-drawer-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cart-drawer-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.cart-drawer-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.cart-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 20px;
+}
+
+.cart-drawer-empty {
+  text-align: center;
+  color: var(--smoke);
+  padding: 50px 0;
+  font-size: 0.9rem;
+}
+
+.cart-drawer-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.cart-drawer-item-img {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+
+.cart-drawer-item-info {
+  flex: 1;
+}
+
+.cart-drawer-item-name {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.cart-drawer-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+
+.cart-drawer-item-qty {
+  font-family: 'IBM Plex Mono', monospace;
+  min-width: 18px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.cart-drawer-item-remove {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--smoke);
+}
+
+.cart-drawer-footer {
+  padding: 18px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.cart-drawer-subtotal {
+  font-family: 'IBM Plex Mono', monospace;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.btn-ember.cart-drawer-checkout-btn {
+  width: 100%;
+  margin-top: 14px;
+}
+
+/* Confirmación de pedido (OrderConfirmation) */
+
+.order-confirmation {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 80px 20px 100px;
+  text-align: center;
+}
+
+.order-confirmation-icon {
+  margin-bottom: 18px;
+}
+
+.order-confirmation-title {
+  font-size: 1.9rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.order-confirmation-text {
+  color: var(--smoke);
+  margin-bottom: 24px;
+}
+
+.order-confirmation-ticket {
+  font-family: 'IBM Plex Mono', monospace;
+  display: inline-block;
+  border: 1.5px dashed var(--ember);
+  padding: 14px 28px;
+  margin-bottom: 30px;
+}
+
+.order-confirmation-ticket-label {
+  font-size: 0.7rem;
+  color: var(--smoke);
+  letter-spacing: 0.1em;
+}
+
+.order-confirmation-ticket-number {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--rust);
+}
+
+/* Pasarela de pago con tarjeta */
+
+.card-payment-form {
+  margin-top: 14px;
+  padding: 18px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+}
+
+.card-payment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.card-payment-title {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.card-payment-secure {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: var(--smoke);
+  letter-spacing: 0.02em;
+}
+
+.card-payment-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.card-payment-row {
+  display: flex;
+  gap: 14px;
+}
+
+.card-payment-row > label {
+  flex: 1;
+}
+
+.card-number-wrap {
+  position: relative;
+}
+
+.card-brand-badge {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--rust);
+  background: #FCEDE5;
+  padding: 3px 8px;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.card-gateway-error {
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: #FBE7E4;
+  border: 1px solid #E3A79C;
+  color: #8A2E22;
+  font-size: 0.82rem;
+}
+
+.card-processing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 10px 12px;
+  background: #FCEDE5;
+  color: var(--rust);
+  font-size: 0.82rem;
+}
+
+.card-spinner {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid rgba(198, 82, 42, 0.3);
+  border-top-color: var(--rust);
+  animation: card-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes card-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

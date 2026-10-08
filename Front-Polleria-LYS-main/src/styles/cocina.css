@@ -1,0 +1,398 @@
+.cocina-page-title {
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.cocina-column-title {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.cocina-history-section {
+  margin-bottom: 36px;
+}
+
+.cocina-finalizado-id {
+  font-weight: 700;
+}
+
+.cocina-id.cocina-finalizado-cliente {
+  margin-left: 8px;
+}
+
+.cocina-finalizado-meta {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+
+.font-mono.cocina-finalizado-duracion {
+  font-size: 0.78rem;
+  color: var(--smoke);
+}
+
+.font-mono.cocina-finalizado-hora {
+  font-size: 0.8rem;
+  color: var(--smoke);
+}
+
+/* ===== Layout: sidebar + contenido ===== */
+.cocina-shell {
+  display: flex;
+  min-height: calc(100vh - 64px);
+}
+
+.cocina-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--paper);
+  border-right: 1px solid var(--line);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.cocina-sidebar-brand {
+  color: var(--ember);
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 0 8px;
+}
+
+.cocina-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cocina-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  color: var(--smoke);
+  font-weight: 600;
+  font-size: 0.92rem;
+  text-decoration: none;
+  transition: background .15s ease, color .15s ease;
+}
+
+.cocina-sidebar-link:hover { background: var(--cream); }
+
+.cocina-sidebar-link.activo {
+  background: var(--ember);
+  color: #fff;
+}
+
+.cocina-main {
+  flex: 1;
+  padding: 28px 32px;
+  min-width: 0;
+}
+
+/* ===== Header local del panel ===== */
+.cocina-topbar-local {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.cocina-reloj-actual { text-align: right; }
+
+.cocina-reloj-hora {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.cocina-reloj-fecha {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--smoke);
+}
+
+/* ===== Filtros Todos/Salón/Delivery/Para llevar ===== */
+.cocina-filtros {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.cocina-filtro-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.cocina-filtro-btn:hover { border-color: var(--ember); }
+
+.cocina-filtro-btn.activo {
+  background: var(--ember);
+  border-color: var(--ember);
+  color: #fff;
+}
+
+/* ===== Tablero de columnas ===== */
+.cocina-board {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.cocina-column {
+  flex: 1;
+  min-width: 300px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 18px;
+}
+
+.cocina-column-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--line);
+}
+
+.cocina-column-icono--nuevo { color: #16A34A; }
+.cocina-column-icono--preparacion { color: #D97706; }
+.cocina-column-icono--listo { color: var(--rust); }
+
+.cocina-count {
+  margin-left: auto;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.cocina-count--nuevo { background: #16A34A; }
+.cocina-count--preparacion { background: #D97706; }
+.cocina-count--listo { background: var(--rust); }
+
+.cocina-column-body {
+  max-height: 640px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.cocina-empty {
+  color: var(--smoke);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+  padding: 24px 0;
+  text-align: center;
+  border: 1.5px dashed var(--line);
+  border-radius: 8px;
+}
+
+/* ===== Tarjeta de pedido ===== */
+.cocina-card {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 14px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.cocina-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 22px rgba(23, 19, 15, 0.10);
+}
+
+.cocina-card--nuevo {
+  border-left-color: #16A34A;
+  animation: cocina-pulse 2.4s ease-in-out infinite;
+}
+.cocina-card--preparacion { border-left-color: #D97706; }
+.cocina-card--listo { border-left-color: var(--rust); }
+
+@keyframes cocina-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+  50% { box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.14); }
+}
+
+.cocina-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.cocina-codigo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.cocina-card-top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cocina-mesa-texto {
+  font-size: 0.8rem;
+  color: var(--smoke);
+  font-weight: 600;
+}
+
+.cocina-tipo-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  color: var(--smoke);
+  white-space: nowrap;
+}
+
+/* El color del badge sigue el color de la columna en la que está la tarjeta */
+.cocina-card--nuevo .cocina-tipo-badge { border-color: #16A34A; color: #16A34A; }
+.cocina-card--preparacion .cocina-tipo-badge { border-color: #D97706; color: #D97706; }
+.cocina-card--listo .cocina-tipo-badge { border-color: var(--rust); color: var(--rust); }
+
+.cocina-timer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.cocina-card--nuevo .cocina-timer { color: #16A34A; }
+.cocina-card--preparacion .cocina-timer { color: #D97706; }
+.cocina-card--listo .cocina-timer { color: var(--rust); }
+
+.cocina-obs-general {
+  background: #FCEDE5;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  color: var(--rust);
+  margin-bottom: 10px;
+}
+
+.cocina-items {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cocina-items li {
+  font-size: 0.92rem;
+  display: flex;
+  gap: 6px;
+}
+
+.cocina-cant {
+  font-weight: 700;
+  color: var(--ember);
+  min-width: 26px;
+}
+
+.cocina-obs-item {
+  color: var(--rust);
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+.cocina-id {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--smoke);
+}
+
+/* ===== Botón de acción (ancho completo, como en el prototipo) ===== */
+.cocina-btn {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: transform .12s ease, filter .15s ease;
+}
+.cocina-btn:active { transform: scale(0.97); }
+.cocina-btn:hover { filter: brightness(0.92); }
+
+.cocina-btn--iniciar { background: #16A34A; color: #fff; }
+.cocina-btn--listo { background: #D97706; color: #fff; }
+.cocina-btn--entregar { background: var(--rust); color: #fff; }
+
+/* ===== Historial ===== */
+.cocina-seccion-titulo {
+  font-family: 'Fraunces', serif;
+  font-size: 1.1rem;
+  margin: 0 0 12px;
+}
+
+.cocina-finalizados-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cocina-finalizado-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+@media (max-width: 900px) {
+  .cocina-shell { flex-direction: column; }
+  .cocina-sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 16px;
+  }
+  .cocina-sidebar-nav { flex-direction: row; }
+  .cocina-board { flex-direction: column; }
+  .cocina-column { min-width: 100%; }
+}

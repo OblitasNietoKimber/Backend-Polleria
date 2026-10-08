@@ -1,0 +1,593 @@
+/* Estilos específicos del EPIC "Catálogo y compras online". */
+
+.app-shell {
+  min-height: 100%;
+}
+
+/* Logo reutilizable (componente Logo) */
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo-img {
+  object-fit: contain;
+}
+
+.brand-logo-sm .brand-logo-img {
+  width: 30px;
+  height: 30px;
+}
+
+.brand-logo-md .brand-logo-img {
+  width: 38px;
+  height: 38px;
+}
+
+.brand-logo-lg .brand-logo-img {
+  width: 56px;
+  height: 56px;
+}
+
+.brand-logo-text {
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.brand-logo-sm .brand-logo-text {
+  font-size: 0.95rem;
+}
+
+.brand-logo-md .brand-logo-text {
+  font-size: 1.15rem;
+}
+
+.brand-logo-lg .brand-logo-text {
+  font-size: 1.4rem;
+}
+
+.lys-nav {
+  background: #FFFFFF;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.lys-nav-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lys-brand-link {
+  background: none;
+  border: none;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: max-content;
+}
+
+.lys-logo-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--char);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.lys-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lys-brand-title {
+  color: var(--ember);
+  font-size: 1.25rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lys-navlinks {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 22px;
+  min-width: 0;
+}
+
+.lys-navlink {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #57534C;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 4px;
+  text-decoration: none;
+  transition: color .15s ease;
+  white-space: nowrap;
+}
+
+.lys-navlink:hover,
+.lys-navlink.active {
+  color: var(--ember);
+}
+
+.lys-cart-button {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 4px;
+}
+
+.lys-cart-count {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+}
+
+@media (max-width: 760px) {
+  .lys-nav-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px 12px;
+    padding: 10px 14px 8px;
+  }
+
+  .lys-brand-link {
+    min-width: 0;
+  }
+
+  .lys-brand-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1.08rem;
+  }
+
+  .lys-navlinks {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    gap: 14px;
+    overflow-x: auto;
+    padding: 2px 2px 6px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .lys-navlinks::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lys-navlink {
+    font-size: 0.84rem;
+    padding-block: 7px;
+  }
+
+  .lys-cart-button {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+  }
+}
+
+@media (max-width: 420px) {
+  .lys-nav-inner {
+    padding-inline: 12px;
+  }
+
+  .lys-logo-badge {
+    width: 34px;
+    height: 34px;
+  }
+
+  .lys-brand-title {
+    font-size: 1rem;
+  }
+
+  .lys-navlinks {
+    gap: 12px;
+  }
+}
+
+.btn-ember {
+  background: var(--ember);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  padding: 12px 22px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  cursor: pointer;
+  display: inline-block;
+  text-decoration: none;
+  transition: transform .12s ease, background .15s ease;
+}
+
+.btn-ember:hover {
+  background: var(--rust);
+}
+
+.btn-ember:active {
+  transform: scale(0.98);
+}
+
+.btn-ember:disabled {
+  background: #C9BEB0;
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  padding: 11px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.btn-outline:hover {
+  background: var(--ink);
+  color: var(--cream);
+}
+
+.icon-tile {
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #201C18, #3A322B);
+  color: var(--ember);
+}
+
+.ticket-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-top: none;
+  position: relative;
+  transition: transform .15s ease, box-shadow .15s ease;
+  cursor: pointer;
+}
+
+.ticket-card::before {
+  content: "";
+  display: block;
+  height: 6px;
+  background-image: repeating-linear-gradient(90deg, var(--ember) 0 10px, transparent 10px 18px);
+  opacity: .85;
+}
+
+.ticket-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(27, 21, 18, 0.12);
+}
+
+.chip {
+  font-size: 0.78rem;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  color: var(--smoke);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .15s ease;
+  font-weight: 500;
+}
+
+.chip.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--cream);
+}
+
+.chip:hover:not(.active) {
+  border-color: var(--ember);
+  color: var(--rust);
+}
+
+.lys-input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 3px;
+  background: var(--paper);
+  font-family: inherit;
+  font-size: 0.92rem;
+  color: var(--ink);
+  transition: border-color .15s ease;
+}
+
+.lys-input:focus {
+  outline: none;
+  border-color: var(--ember);
+}
+
+.cart-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: min(420px, 100vw);
+  background: var(--paper);
+  z-index: 60;
+  box-shadow: -8px 0 30px rgba(0, 0, 0, 0.18);
+  transform: translateX(100%);
+  transition: transform .25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.cart-drawer.open {
+  transform: translateX(0);
+}
+
+.cart-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(27, 21, 18, 0.45);
+  z-index: 55;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+
+.cart-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.badge-count {
+  background: var(--ember);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.qty-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 3px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.qty-btn:hover {
+  border-color: var(--ember);
+  color: var(--ember);
+}
+
+.step-stub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border: 1.5px solid var(--line);
+  color: var(--smoke);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-stub.active {
+  border-color: var(--ember);
+  color: var(--ember);
+  background: #FCEDE5;
+}
+
+.step-stub.done {
+  border-color: var(--gold);
+  color: var(--rust);
+  background: #FBF3E1;
+}
+.lys-login {
+  display: inline-block;
+  padding: 9px 18px;
+  margin-left: 15px;
+  border-radius: 20px;
+  background-color: #f4b400;
+  color: #222;
+  text-decoration: none;
+  font-weight: bold;
+  transition: 0.3s ease;
+}
+
+.lys-login:hover {
+  background-color: #e09f00;
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.lys-login.active {
+  background-color: #d62828;
+  color: #fff;
+}
+/* Contenedor de la cuenta */
+.lys-account {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.lys-account,
+.lys-account * {
+  box-sizing: border-box;
+}
+
+/* Círculo con iniciales */
+.lys-account .lys-account-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 42px;
+  height: 42px;
+  padding: 0;
+
+  background: #d62828;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #e8ddd2;
+
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.lys-account .lys-account-avatar:hover,
+.lys-account .lys-account-avatar[aria-expanded="true"] {
+  background: #b91f1f;
+  box-shadow: 0 0 0 3px rgba(214, 40, 40, 0.15);
+}
+
+/* Menú desplegable */
+.lys-account .lys-account-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 10;
+
+  width: 250px;
+  max-width: calc(100vw - 28px);
+  padding: 8px;
+
+  background: #ffffff;
+  color: #271e18;
+  border: 1px solid #e8ddd2;
+  border-radius: 12px;
+  box-shadow: 0 12px 35px rgba(27, 21, 18, 0.16);
+}
+
+/* Nombre y correo */
+.lys-account .lys-account-info {
+  margin-bottom: 6px;
+  padding: 10px 12px 14px;
+  border-bottom: 1px solid #eee5dc;
+  text-align: left;
+}
+
+.lys-account .lys-account-info strong {
+  display: block;
+  margin-bottom: 5px;
+
+  color: #271e18;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.lys-account .lys-account-info span {
+  display: block;
+
+  color: #66594e;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* Enlace a Mi perfil */
+.lys-account .lys-account-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 12px;
+  border-radius: 7px;
+
+  color: #30251d;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.lys-account .lys-account-link:hover {
+  background: #fff0e9;
+  color: #b91f1f;
+}
+
+.lys-account .lys-account-avatar:focus-visible,
+.lys-account .lys-account-link:focus-visible {
+  outline: 2px solid #a51b16;
+  outline-offset: 3px;
+}
+
+/* Evitar que la barra recorte el menú en celulares */
+@media (max-width: 760px) {
+  .lys-navlinks {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .lys-account {
+    position: static;
+  }
+
+  .lys-nav-inner {
+    position: relative;
+  }
+
+  .lys-account .lys-account-dropdown {
+    top: calc(100% + 8px);
+    right: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lys-account .lys-account-avatar,
+  .lys-account .lys-account-link {
+    transition: none;
+  }
+}
