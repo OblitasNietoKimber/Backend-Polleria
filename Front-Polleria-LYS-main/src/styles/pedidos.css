@@ -363,3 +363,7 @@
 .order-status-history { padding: 1rem 2rem; }
 .order-status-history li { margin: .75rem 0; }
 .order-status-history time { display: block; font-size: .85rem; color: var(--text-muted, #555); }
+
+.order-detail-header > div { min-width: 0; }
+.order-detail-id { flex-wrap: wrap; overflow-wrap: anywhere; }
+.order-card-id { overflow-wrap: anywhere; }

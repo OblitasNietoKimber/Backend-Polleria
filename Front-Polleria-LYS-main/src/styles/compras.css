@@ -421,3 +421,6 @@
     transform: rotate(360deg);
   }
 }
+
+.order-confirmation-ticket-number { overflow-wrap: anywhere; }
+.confirmation-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; }
