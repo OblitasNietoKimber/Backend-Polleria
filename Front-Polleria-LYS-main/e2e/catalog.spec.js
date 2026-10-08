@@ -17,7 +17,10 @@ async function mockCatalog(page) {
       status = 401
       response = { message: 'No active session', statusCode: 401 }
     } else if (url.pathname.endsWith('/categorias')) response = categories
-    else if (url.pathname.endsWith('/productos')) response = products
+    else if (url.pathname.endsWith('/productos')) {
+      const id = url.searchParams.get('id')
+      response = id ? products.filter(product => `eq.${product.id}` === id) : products
+    }
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(response) })
   })
   return calls
@@ -29,4 +32,18 @@ test('muestra categorías nuevas recibidas del servidor', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Especiales persistidos' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Pollos a la Leña' })).toHaveCount(0)
   expect(calls.some(url => url.pathname.endsWith('/categorias'))).toBe(true)
+})
+
+test('muestra los campos persistidos y bloquea agregar un producto agotado', async ({ page }) => {
+  await mockCatalog(page)
+  await page.goto('/catalogo')
+  const available = page.locator('.ticket-card').filter({ hasText: 'Plato del servidor' })
+  await expect(available).toContainText('Descripción persistida')
+  await expect(available).toContainText('21.50')
+  await expect(page.locator('.ticket-card')).toHaveCount(2)
+  await expect(page.locator('.ticket-card').filter({ hasText: 'Plato agotado' }).getByRole('button', { name: 'Agotado' })).toBeDisabled()
+  await available.getByRole('button', { name: 'Agregar', exact: true }).click()
+  await page.getByRole('button', { name: 'Ver carrito' }).click()
+  await expect(page.locator('.cart-drawer-item-name')).toHaveText('Plato del servidor')
+  await expect(page.locator('.cart-drawer-subtotal')).toContainText('21.50')
 })

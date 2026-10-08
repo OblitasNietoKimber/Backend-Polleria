@@ -1,8 +1,7 @@
 import { Search } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { useCatalogResource } from '../hooks/useCatalogResource'
-import { PRODUCTS } from '../data/products'
-import { filterProducts, getCategories } from '../services/productService'
+import { filterProducts, getCategories, getProducts } from '../services/productService'
 import ProductCard from '../components/ProductCard'
 import ProductDetailModal from '../components/ProductDetailModal'
 import '../styles/catalogo.css'
@@ -10,14 +9,16 @@ import '../styles/catalogo.css'
 export default function CatalogoPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryResource = useCatalogResource(getCategories, 'categorias')
+  const productResource = useCatalogResource(getProducts, 'productos')
+  const products = productResource.data || []
 
   const activeCategory = searchParams.get('categoria') || 'todos'
   const search = searchParams.get('buscar') || ''
   const selectedProductId = searchParams.get('producto')
 
-  const filteredProducts = filterProducts(PRODUCTS, { category: activeCategory, search })
+  const filteredProducts = filterProducts(products, { category: activeCategory, search })
   const selectedProduct = selectedProductId
-    ? PRODUCTS.find((product) => product.id === Number(selectedProductId))
+    ? products.find((product) => product.id === Number(selectedProductId))
     : null
 
   function updateParams(next) {

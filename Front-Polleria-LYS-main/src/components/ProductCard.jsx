@@ -6,7 +6,7 @@ export default function ProductCard({ product, onSelect }) {
 
   function handleAdd(event) {
     event.stopPropagation()
-    addToCart(product.id)
+    addToCart(product)
   }
 
   return (
