@@ -18,8 +18,9 @@ beforeAll(async () => {
     CREATE TABLE auth.users(id uuid PRIMARY KEY);
     CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     GRANT USAGE ON SCHEMA auth,public TO authenticated,anon;`)
-  const directory = new URL('../../insforge/migrations/',import.meta.url)
-  for (const name of (await readdir(directory)).filter(name => name.endsWith('.sql')).sort()) await db.exec(await readFile(new URL(name,directory),'utf8'))
+  for (const directory of [new URL('../../insforge/migrations/',import.meta.url),new URL('../../migrations/',import.meta.url)]) {
+    for (const name of (await readdir(directory)).filter(name => name.endsWith('.sql')).sort()) await db.exec(await readFile(new URL(name,directory),'utf8'))
+  }
   await db.query('INSERT INTO auth.users VALUES ($1),($2),($3)',[alice,bob,staff])
   await db.query("INSERT INTO perfiles(id,rol) VALUES ($1,'cliente'),($2,'cliente'),($3,'mesera')",[alice,bob,staff])
 },30000)

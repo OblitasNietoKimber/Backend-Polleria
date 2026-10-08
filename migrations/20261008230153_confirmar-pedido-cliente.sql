@@ -1,4 +1,9 @@
-BEGIN;
+-- Restablece permisos de columnas explícitos también en instalaciones previas.
+REVOKE ALL ON public.pedidos, public.detalles_pedido FROM anon, authenticated;
+GRANT SELECT ON public.pedidos, public.detalles_pedido TO authenticated;
+GRANT INSERT (codigo,cliente_id,mesa_id,creado_por,tipo,observaciones,entrega) ON public.pedidos TO authenticated;
+GRANT UPDATE (estado_id,observaciones) ON public.pedidos TO authenticated;
+GRANT INSERT (pedido_id,producto_id,cantidad,precio_unitario) ON public.detalles_pedido TO authenticated;
 -- Los clientes crean exclusivamente mediante la función transaccional.
 DROP POLICY pedidos_crear ON public.pedidos;
 CREATE POLICY pedidos_crear ON public.pedidos FOR INSERT TO authenticated
@@ -83,4 +88,3 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.crear_pedido_cliente(text,text,jsonb,jsonb,text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.crear_pedido_cliente(text,text,jsonb,jsonb,text) TO authenticated;
-COMMIT;

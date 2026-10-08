@@ -1,4 +1,3 @@
-BEGIN;
 ALTER TABLE public.pedidos
   ADD COLUMN subtotal numeric(12,2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
   ADD COLUMN envio numeric(12,2) NOT NULL DEFAULT 0 CHECK (envio >= 0),
@@ -55,4 +54,3 @@ $$;
 CREATE TRIGGER detalle_importes AFTER INSERT OR UPDATE OR DELETE ON public.detalles_pedido
 FOR EACH ROW EXECUTE FUNCTION public.recalcular_subtotal_pedido();
 REVOKE ALL ON FUNCTION public.preparar_importes_pedido(), public.preparar_nombre_detalle(), public.recalcular_subtotal_pedido() FROM PUBLIC;
-COMMIT;

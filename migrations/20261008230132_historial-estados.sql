@@ -1,4 +1,3 @@
-BEGIN;
 CREATE TABLE public.historial_estados_pedido (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   pedido_id uuid NOT NULL REFERENCES public.pedidos(id) ON DELETE CASCADE,
@@ -33,4 +32,3 @@ REVOKE ALL ON FUNCTION public.registrar_estado_pedido() FROM PUBLIC;
 -- Para pedidos anteriores solo se conoce su estado actual, no cuándo cambió.
 INSERT INTO public.historial_estados_pedido(pedido_id,estado_id)
 SELECT id,estado_id FROM public.pedidos;
-COMMIT;
