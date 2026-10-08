@@ -1,279 +1,141 @@
-/**
- * authService.js
- *
- * Servicio de autenticación. Por ahora simula un backend usando localStorage,
- * para poder maquetar y validar todo el flujo de Login/Registro/Perfil sin
- * depender de que el API REST ya esté disponible.
- *
- * Cuando exista el backend real, solo hay que reemplazar el cuerpo de estas
- * funciones por llamadas fetch/axios; la firma (parámetros y lo que retornan)
- * se mantiene igual para no romper los componentes que ya las consumen.
- */
+import { insforge } from '../lib/insforge';
 
-const USERS_KEY = 'lys_users';
-const SESSION_KEY = 'lys_session';
-const RESET_KEY = 'lys_reset_requests';
-
-
-function getUsers() {
-  const raw = localStorage.getItem(USERS_KEY);
-  return raw ? JSON.parse(raw) : [];
+let snapshot = { user: null, loading: true, error: '' };
+let initialized;
+let generation = 0;
+const listeners = new Set();
+const normalizeEmail = (email) => email.trim().toLowerCase();
+const pendingKey = 'lys_pending_profile';
+function publish(next) {
+  snapshot = { ...snapshot, ...next };
+  listeners.forEach((listener) => listener());
 }
-
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+export const subscribe = (listener) => { listeners.add(listener); return () => listeners.delete(listener); };
+export const getSnapshot = () => snapshot;
+export const getCurrentUser = () => snapshot.user;
+export const isAuthenticated = () => Boolean(snapshot.user);
+function unwrap({ data, error }) {
+  if (error) throw new Error(error.message || 'No se pudo conectar con InsForge.');
+  return data;
 }
-
-function normalizeEmail(email) {
-  return (email || '').trim().toLowerCase();
+function pendingProfile(email) {
+  try {
+    const pending = JSON.parse(sessionStorage.getItem(pendingKey));
+    return pending?.email === email ? pending : null;
+  } catch { return null; }
 }
-
-
-export function register(data) {
+async function loadProfile(user) {
+  let profile = unwrap(await insforge.database.from('perfiles').select('*').eq('id', user.id).maybeSingle());
+  const pending = pendingProfile(user.email);
+  if (!profile) {
+    const fields = pending || { nombre: user.profile?.name || '', apellido: '', telefono: '' };
+    const result = await insforge.database.from('perfiles').insert([{
+      id: user.id, nombre: fields.nombre, apellido: fields.apellido, telefono: fields.telefono,
+    }]).select().single();
+    if (result.error?.code === '23505') {
+      profile = unwrap(await insforge.database.from('perfiles').select('*').eq('id', user.id).single());
+    } else profile = unwrap(result);
+  }
+  if (pending) {
+    profile = unwrap(await insforge.database.from('perfiles').update({
+      nombre: pending.nombre, apellido: pending.apellido, telefono: pending.telefono,
+    }).eq('id', user.id).select().single());
+    sessionStorage.removeItem(pendingKey);
+  }
+  return { ...profile, email: user.email, creadoEn: profile.creado_en };
+}
+export async function restoreSession() {
+  const current = ++generation;
+  try {
+    const result = await insforge.auth.getCurrentUser();
+    // Un navegador sin cookie de sesión recibe 401; debe poder abrir el login.
+    const data = result.error?.statusCode === 401 ? { user: null } : unwrap(result);
+    const user = data?.user ? await loadProfile(data.user) : null;
+    if (generation === current) publish({ user, loading: false, error: '' });
+    return user;
+  } catch (error) {
+    if (generation === current) publish({ user: null, loading: false, error: error.message });
+    throw error;
+  }
+}
+export function initializeAuth() {
+  if (!initialized) {
+    // Retira credenciales y sesiones del prototipo; nunca se importan como cuentas reales.
+    ['lys_users', 'lys_session', 'lys_reset_requests'].forEach((key) => localStorage.removeItem(key));
+    insforge.auth.onAuthStateChange((event) => {
+      if (event === 'signedOut') { generation++; publish({ user: null, loading: false }); }
+      else if (event === 'tokenRefreshed') { void restoreSession().catch(() => {}); }
+    });
+    initialized = restoreSession().catch(() => null);
+  }
+  return initialized;
+}
+export async function register(data) {
   const email = normalizeEmail(data.email);
-  const users = getUsers();
-
-  if (users.some((u) => u.email === email)) {
-    throw new Error('Ya existe una cuenta registrada con ese correo.');
-  }
-
-  const newUser = {
-    id: Date.now().toString(36),
-    nombre: data.nombre.trim(),
-    apellido: data.apellido.trim(),
-    email,
-    telefono: data.telefono.trim(),
-    password: data.password, 
-    rol: 'cliente',
+  const pending = { email, nombre: data.nombre.trim(), apellido: data.apellido.trim(), telefono: data.telefono.trim() };
+  const result = unwrap(await insforge.auth.signUp({
+    email, password: data.password, name: `${pending.nombre} ${pending.apellido}`,
+    redirectTo: `${window.location.origin}/login`,
+  }));
+  sessionStorage.setItem(pendingKey, JSON.stringify(pending));
+  if (result.requireEmailVerification) return { requireEmailVerification: true, email };
+  return { user: await restoreSession(), requireEmailVerification: false };
+}
+export async function login({ email, password }) {
+  unwrap(await insforge.auth.signInWithPassword({ email: normalizeEmail(email), password }));
+  return restoreSession();
+}
+export async function logout() {
+  // La UI pierde acceso inmediatamente incluso si falla la conexión al cerrar sesión.
+  generation++;
+  publish({ user: null, loading: false, error: '' });
+  unwrap(await insforge.auth.signOut());
+}
+export async function updateProfile(data) {
+  const user = getCurrentUser();
+  if (!user) throw new Error('Debes iniciar sesión.');
+  const profile = unwrap(await insforge.database.from('perfiles').update({
+    nombre: data.nombre.trim(), apellido: data.apellido.trim(), telefono: data.telefono.trim(),
+  }).eq('id', user.id).select().single());
+  const updated = { ...user, ...profile };
+  publish({ user: updated });
+  return updated;
+}
+export async function updatePreferences(preferencias) {
+  const user = getCurrentUser();
+  if (!user) throw new Error('Debes iniciar sesión.');
+  const profile = unwrap(await insforge.database.from('perfiles').update({
     preferencias: {
-      notificacionesEmail: true,
-      notificacionesPromos: true,
+      notificacionesEmail: Boolean(preferencias.notificacionesEmail),
+      notificacionesPromos: Boolean(preferencias.notificacionesPromos),
     },
-    creadoEn: new Date().toISOString(),
-  };
-
-  users.push(newUser);
-  saveUsers(users);
-
-  return sanitizeUser(newUser);
+  }).eq('id', user.id).select().single());
+  const updated = { ...user, ...profile };
+  publish({ user: updated });
+  return updated;
 }
-
-export function login({ email, password }) {
-  const users = getUsers();
-  const user = users.find((u) => u.email === normalizeEmail(email));
-
-  if (!user || user.password !== password) {
-    throw new Error('Correo o contraseña incorrectos.');
-  }
-
-  const session = sanitizeUser(user);
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-  return session;
+export async function requestPasswordReset(email) {
+  unwrap(await insforge.auth.sendResetPasswordEmail({
+    email: normalizeEmail(email), redirectTo: `${window.location.origin}/reset-password`,
+  }));
 }
-
-export function logout() {
-  localStorage.removeItem(SESSION_KEY);
+export async function resetPassword({ email, code, token, password }) {
+  const otp = token || unwrap(await insforge.auth.exchangeResetPasswordToken({ email: normalizeEmail(email), code: code.trim() })).token;
+  unwrap(await insforge.auth.resetPassword({ newPassword: password, otp }));
 }
-
-export function getCurrentUser() {
-  const raw = localStorage.getItem(SESSION_KEY);
-  return raw ? JSON.parse(raw) : null;
+export async function verifyEmail({ email, code }) {
+  unwrap(await insforge.auth.verifyEmail({ email: normalizeEmail(email), otp: code.trim() }));
+  return restoreSession();
 }
-
-export function isAuthenticated() {
-  return getCurrentUser() !== null;
+export async function resendVerification(email) {
+  unwrap(await insforge.auth.resendVerificationEmail({ email: normalizeEmail(email), redirectTo: `${window.location.origin}/login` }));
 }
-
-function sanitizeUser(user) {
-  const { password, ...safeUser } = user;
-  return safeUser;
+export async function getOAuthProviders() {
+  return unwrap(await insforge.auth.getPublicAuthConfig()).oAuthProviders || [];
 }
-
-// --- Recuperación de contraseña ----------------------------------------
-
-function getResetRequests() {
-  const raw = localStorage.getItem(RESET_KEY);
-  return raw ? JSON.parse(raw) : {};
+export async function loginWithProvider(provider) {
+  const providers = await getOAuthProviders();
+  if (!providers.includes(provider)) throw new Error('Este proveedor no está habilitado en InsForge.');
+  unwrap(await insforge.auth.signInWithOAuth(provider, { redirectTo: `${window.location.origin}/auth/callback` }));
 }
-
-function saveResetRequests(requests) {
-  localStorage.setItem(RESET_KEY, JSON.stringify(requests));
-}
-
-export function requestPasswordReset(email) {
-  const normalizedEmail = normalizeEmail(email);
-  const users = getUsers();
-  const user = users.find((u) => u.email === normalizedEmail);
-
-  if (!user) {
-    throw new Error('No encontramos una cuenta con ese correo.');
-  }
-
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const requests = getResetRequests();
-  requests[normalizedEmail] = {
-    code,
-    expiresAt: Date.now() + 15 * 60 * 1000, // 15 minutos
-  };
-  saveResetRequests(requests);
-
-  return { email: normalizedEmail, code };
-}
-
-export function resetPassword({ email, code, password }) {
-  const normalizedEmail = normalizeEmail(email);
-  const requests = getResetRequests();
-  const request = requests[normalizedEmail];
-
-  if (!request || request.code !== code) {
-    throw new Error('El código de verificación es inválido.');
-  }
-  if (Date.now() > request.expiresAt) {
-    throw new Error('El código de verificación expiró. Solicita uno nuevo.');
-  }
-
-  const users = getUsers();
-  const userIndex = users.findIndex((u) => u.email === normalizedEmail);
-  if (userIndex === -1) {
-    throw new Error('No encontramos una cuenta con ese correo.');
-  }
-
-  users[userIndex].password = password;
-  saveUsers(users);
-
-  delete requests[normalizedEmail];
-  saveResetRequests(requests);
-}
-
-export function changePassword({ currentPassword, newPassword }) {
-  const session = getCurrentUser();
-  if (!session) throw new Error('Debes iniciar sesión para cambiar tu contraseña.');
-
-  const users = getUsers();
-  const userIndex = users.findIndex((u) => u.id === session.id);
-  if (userIndex === -1) throw new Error('No encontramos tu cuenta.');
-
-  if (users[userIndex].password !== currentPassword) {
-    throw new Error('La contraseña actual es incorrecta.');
-  }
-
-  users[userIndex].password = newPassword;
-  saveUsers(users);
-}
-
-export function updateProfile(data) {
-  const session = getCurrentUser();
-  if (!session) throw new Error('Debes iniciar sesión para editar tu perfil.');
-
-  const users = getUsers();
-  const userIndex = users.findIndex((u) => u.id === session.id);
-  if (userIndex === -1) throw new Error('No encontramos tu cuenta.');
-
-  users[userIndex] = {
-    ...users[userIndex],
-    nombre: data.nombre.trim(),
-    apellido: data.apellido.trim(),
-    telefono: data.telefono.trim(),
-  };
-  saveUsers(users);
-
-  const updatedSession = sanitizeUser(users[userIndex]);
-  localStorage.setItem(SESSION_KEY, JSON.stringify(updatedSession));
-  return updatedSession;
-}
-
-export function updatePreferences(preferencias) {
-  const session = getCurrentUser();
-  if (!session) throw new Error('Debes iniciar sesión.');
-
-  const users = getUsers();
-  const userIndex = users.findIndex((u) => u.id === session.id);
-  if (userIndex === -1) throw new Error('No encontramos tu cuenta.');
-
-  users[userIndex].preferencias = { ...users[userIndex].preferencias, ...preferencias };
-  saveUsers(users);
-
-  const updatedSession = sanitizeUser(users[userIndex]);
-  localStorage.setItem(SESSION_KEY, JSON.stringify(updatedSession));
-  return updatedSession;
-}
-
-// --- Cuentas de prueba ---------------------------------------------------
-
-export function seedTestAccounts() {
-  const users = getUsers();
-
-  const demoUsers = [
-    {
-           id: 'demo-cliente-1',
-      nombre: 'Cliente',
-      apellido: 'Demo',
-      email: 'cliente@lenasysabores.test',
-      telefono: '987654321',
-      password: 'Cliente123',
-      rol: 'cliente',
-      preferencias: { notificacionesEmail: true, notificacionesPromos: true,},
-      creadoEn: new Date().toISOString(),
-    },
-    {
-      id: 'demo-admin-1',
-      nombre: 'Ana',
-      apellido: 'Torres',
-      email: 'admin@lenasysabores.test',
-      telefono: '987654322',
-      password: 'Admin123',
-      rol: 'admin',
-      preferencias: { notificacionesEmail: true, notificacionesPromos: false },
-      creadoEn: new Date().toISOString(),
-    },
-    {
-      id: 'demo-mesera-1',
-      nombre: 'Fernando',
-      apellido: 'Celis',
-      email: 'mesera@lenasysabores.test',
-      telefono: '987654323',
-      password: 'Mesera123',
-      rol: 'mesera',
-      preferencias: {notificacionesEmail: true,notificacionesPromos: false,},
-      creadoEn: new Date().toISOString(),
-    },
-    {
-      id: 'demo-cocina-1',
-      nombre: 'Carlos',
-      apellido: 'Ramírez',
-      email: 'cocina@lenasysabores.test',
-      telefono: '987654324',
-      password: 'Cocina123',
-      rol: 'cocina',
-      preferencias: { notificacionesEmail: true,notificacionesPromos: false,
-      },
-      creadoEn: new Date().toISOString(),
-    },
-  ];
-
-  demoUsers.forEach((demoUser) => {
-    const accountExists = users.some(
-      (user) => user.email === demoUser.email
-    );
-
-    if (!accountExists) {
-      users.push(demoUser);
-    }
-  });
-
-  saveUsers(users);
-}
-
-export default {
-  register,
-  login,
-  logout,
-  getCurrentUser,
-  isAuthenticated,
-  requestPasswordReset,
-  resetPassword,
-  changePassword,
-  updateProfile,
-  updatePreferences,
-  seedTestAccounts,
-};
+export default { register, login, logout, getCurrentUser, isAuthenticated, updateProfile, updatePreferences, requestPasswordReset, resetPassword };

@@ -8,12 +8,13 @@ import "./styles/login.css";
 import './styles/global.css'
 import "./styles/caja.css";
 import "./styles/dashboard.css";
-import { seedTestAccounts } from './services/authService.js'
+import { initializeAuth } from './services/authService.js'
+import AuthBoundary from './components/common/AuthBoundary.jsx'
 
-seedTestAccounts()
+void initializeAuth()
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <App />
+    <AuthBoundary><App /></AuthBoundary>
   </StrictMode>
 );

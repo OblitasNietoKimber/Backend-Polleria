@@ -108,14 +108,10 @@ function RegisterPage() {
     setLoading(true);
 
     try {
-      await authService.register(form);
-
-      await authService.login({
-        email: form.email,
-        password: form.password,
-      });
-
-      navigate('/profile');
+      const result = await authService.register(form);
+      if (result.requireEmailVerification) {
+        navigate('/verify-email', { state: { email: result.email } });
+      } else navigate('/profile');
     } catch (err) {
       setFormError(
         err.message || 'No se pudo completar el registro.'

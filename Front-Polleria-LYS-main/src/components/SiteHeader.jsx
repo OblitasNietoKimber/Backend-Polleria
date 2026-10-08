@@ -3,19 +3,21 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext'
 import { useState } from 'react';
 import * as authService from '../services/authService';
+import { useAuth } from '../hooks/useAuth';
 export default function SiteHeader() {
   const { cartCount, openCart } = useCart()
   const location = useLocation();
   const navigate = useNavigate();
 
-const handleLogout = () => {
-  authService.logout();
+const handleLogout = async () => {
+  try { await authService.logout(); } catch (error) { setLogoutError(error.message); }
   setMenuPath(null);
   navigate('/login');
 };
   const [menuPath, setMenuPath] = useState(null);
+  const [logoutError, setLogoutError] = useState('');
 
-  const user = authService.getCurrentUser();
+  const { user } = useAuth();
   const canAccess = (roles) => Boolean(user && roles.includes(user.rol));
 
   const initials = user
@@ -27,6 +29,7 @@ const handleLogout = () => {
   return (
     <nav className="lys-nav">
       <div className="lys-nav-inner">
+        {logoutError && <p role="alert">{logoutError}</p>}
         <NavLink
           to="/"
           className="lys-brand-link"
@@ -59,10 +62,10 @@ const handleLogout = () => {
           {canAccess(['cocina', 'admin']) && (
             <NavLink to="/cocina" className={({ isActive }) =>  `lys-navlink ${isActive ? 'active' : ''}` } > Cocina</NavLink>
           )}
-          {canAccess(['admin']) && (
+          {canAccess(['caja', 'admin']) && (
             <><NavLink to="/caja" className={({ isActive }) => `lys-navlink ${isActive ? 'active' : ''}` }> Caja</NavLink>
 
-              <NavLink to="/dashboard"className={({ isActive }) =>`lys-navlink ${isActive ? 'active' : ''}`}> Dashboard</NavLink> </>
+              {canAccess(['admin']) && <NavLink to="/dashboard"className={({ isActive }) =>`lys-navlink ${isActive ? 'active' : ''}`}> Dashboard</NavLink>} </>
           )}
           {user ? (
             <div

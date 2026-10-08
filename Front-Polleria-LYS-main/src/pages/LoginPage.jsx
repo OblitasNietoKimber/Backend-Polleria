@@ -56,6 +56,7 @@ function LoginPage() {
     mesera: '/mesas',
     cocina: '/cocina',
     admin: '/dashboard',
+    caja: '/caja',
   };
 
   navigate(routesByRole[rol] || '/profile', { replace: true });
