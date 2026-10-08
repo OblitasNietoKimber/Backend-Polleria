@@ -81,6 +81,7 @@ El frontend requiere `VITE_INSFORGE_URL` y `VITE_INSFORGE_ANON_KEY` del mismo ba
 ## Validación realizada
 
 - 75 pruebas unitarias y de PostgreSQL embebido (PGlite): cálculos, precios del servidor, snapshots del producto, rollback, reintentos, RLS entre clientes, auditoría, compatibilidad con salón y migración de pedidos anteriores, además de los módulos previos.
+- Playwright levanta un servidor separado con una clave ficticia; no reutiliza las credenciales reales de `.env.local`.
 - 20 pruebas Playwright con respuestas de InsForge interceptadas: autenticación, catálogo y pedidos; incluyen delivery, recojo, historial, reintento después de recargar y presentación móvil sin desbordamiento.
 - Las tres migraciones se ejecutaron correctamente en la rama real de InsForge.
 - La API real rechazó lectura anónima de pedidos e historial y confirmación anónima, con código `42501`.
