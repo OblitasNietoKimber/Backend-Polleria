@@ -40,14 +40,14 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/profile/*" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/catalogo" element={<CatalogoPage />} />
-          <Route path="/checkout/entrega" element={<EntregaPage />} />
-          <Route path="/checkout/pago" element={<PagoPage />} />
-          <Route path="/checkout/resumen" element={<ResumenPage />} />
-          <Route path="/confirmacion" element={<ConfirmacionPage />} />
-          <Route path="/caja" element={<ProtectedRoute allowedRoles={['admin']}><CajaPage /></ProtectedRoute>} />
+          <Route path="/checkout/entrega" element={<ProtectedRoute allowedRoles={['cliente']}><EntregaPage /></ProtectedRoute>} />
+          <Route path="/checkout/pago" element={<ProtectedRoute allowedRoles={['cliente']}><PagoPage /></ProtectedRoute>} />
+          <Route path="/checkout/resumen" element={<ProtectedRoute allowedRoles={['cliente']}><ResumenPage /></ProtectedRoute>} />
+          <Route path="/confirmacion" element={<ProtectedRoute allowedRoles={['cliente']}><ConfirmacionPage /></ProtectedRoute>} />
+          <Route path="/caja" element={<ProtectedRoute allowedRoles={['caja', 'admin']}><CajaPage /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><DashboardAdminPage /></ProtectedRoute>} />
           <Route path="/pedidos" element={<ProtectedRoute allowedRoles={['cliente']}><PedidosPage /></ProtectedRoute>} />
-          <Route path="/pedidos/:id" element={<OrderDetailPage />} />
+          <Route path="/pedidos/:id" element={<ProtectedRoute allowedRoles={['cliente']}><OrderDetailPage /></ProtectedRoute>} />
           <Route path="/cocina" element={<ProtectedRoute allowedRoles={['cocina', 'admin']}><CocinaPage /></ProtectedRoute>} />
           <Route path="/cocina/historial" element={<ProtectedRoute allowedRoles={['cocina', 'admin']}><HistorialCocinaPage /></ProtectedRoute>} />
           <Route path="/mesas" element={<ProtectedRoute allowedRoles={['mesera', 'admin']}><MesasPage /></ProtectedRoute>} />
