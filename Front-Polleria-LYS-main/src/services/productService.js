@@ -60,3 +60,42 @@ export async function getProduct(value) {
   return row ? productFromRow(row) : null
 }
 
+async function requireAdministrator() {
+  database()
+  const session = unwrap(await insforge.auth.getCurrentUser())
+  if (!session?.user) throw new Error('Debes iniciar sesión para modificar productos.')
+  const profile = unwrap(await database().from('perfiles').select('rol')
+    .eq('id', session.user.id).maybeSingle())
+  if (profile?.rol !== 'admin') throw new Error('Solo el Administrador puede modificar productos.')
+  // PostgreSQL vuelve a comprobar el rol al ejecutar la escritura.
+}
+
+function productValues(product) {
+  if (typeof product?.name !== 'string' || !product.name.trim()) throw new Error('El nombre es obligatorio.')
+  if (typeof product.category !== 'string' || !product.category.trim()) throw new Error('La categoría es obligatoria.')
+  if (typeof product.price !== 'number' || !Number.isFinite(product.price) || product.price < 0 || product.price > 99999999.99) {
+    throw new Error('El precio debe ser un número válido mayor o igual a cero.')
+  }
+  const available = product.available ?? true
+  if (typeof available !== 'boolean') throw new Error('La disponibilidad debe ser verdadera o falsa.')
+  if (product.desc !== undefined && typeof product.desc !== 'string') throw new Error('La descripción no es válida.')
+  if (product.image != null && typeof product.image !== 'string') throw new Error('La imagen debe ser una URL.')
+  const image = product.image?.trim() || null
+  if (image) {
+    let url
+    try { url = new URL(image) } catch { throw new Error('La imagen debe ser una URL válida.') }
+    if (!['https:', 'http:'].includes(url.protocol)) throw new Error('La imagen debe usar una URL HTTP o HTTPS.')
+  }
+  return {
+    nombre: product.name.trim(), categoria_id: product.category.trim(), precio: product.price,
+    descripcion: product.desc?.trim() || '', imagen: image, disponible: available,
+  }
+}
+
+export async function createProduct(product) {
+  const values = productValues(product)
+  await requireAdministrator()
+  return productFromRow(unwrap(await database().from('productos').insert([values])
+    .select(PRODUCT_COLUMNS).single()))
+}
+

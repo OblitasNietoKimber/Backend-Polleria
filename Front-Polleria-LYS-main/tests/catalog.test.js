@@ -1,14 +1,14 @@
 import { beforeEach, expect, test, vi } from 'vitest'
-const fake = vi.hoisted(() => ({ from: vi.fn(), user: null }))
-vi.mock('../src/lib/insforge', () => ({ insforge: { database: { from: fake.from } }, configurationError: '' }))
-import { getCategories, getProducts, getProduct } from '../src/services/productService'
+const fake = vi.hoisted(() => ({ from: vi.fn(), currentUser: vi.fn() }))
+vi.mock('../src/lib/insforge', () => ({ insforge: { database: { from: fake.from }, auth: { getCurrentUser: fake.currentUser } }, configurationError: '' }))
+import { getCategories, getProducts, getProduct, createProduct } from '../src/services/productService'
 
 let requests
 let responses
 beforeEach(() => {
   requests = []
   responses = []
-  fake.user = null
+  fake.currentUser.mockResolvedValue({ data: { user: null }, error: null })
   fake.from.mockImplementation(table => {
     const request = { table }
     requests.push(request)
@@ -18,6 +18,8 @@ beforeEach(() => {
       eq: (column, value) => { request.eq = [column, value]; return query },
       ilike: (column, value) => { request.ilike = [column, value]; return query },
       maybeSingle: () => Promise.resolve(responses.shift()),
+      single: () => Promise.resolve(responses.shift()),
+      insert: rows => { request.insert = rows; return query },
       range: (from, to) => { request.range = [from, to]; return Promise.resolve(responses.shift()) },
     }
     return query
@@ -93,4 +95,37 @@ test('combina categoría y búsqueda en todos los lotes de la consulta', async (
   responses.push({ data: [] })
   await getProducts({ category: 'todos' })
   expect(requests[2].eq).toBeUndefined()
+})
+
+const validProduct = { name: '  Pollo nuevo  ', category: ' pollos ', desc: ' Descripción ', price: 24.5, image: 'https://example.com/pollo.png', available: false }
+
+test('el Administrador crea un producto y PostgreSQL asigna su ID', async () => {
+  fake.currentUser.mockResolvedValue({ data: { user: { id: 'admin-id', profile: { rol: 'cliente' } } } })
+  responses.push({ data: { rol: 'admin' } }, { data: { id: 18, categoria_id: 'pollos', nombre: 'Pollo nuevo', precio: '24.50', disponible: false } })
+  expect(await createProduct({ ...validProduct, id: 1, rol: 'admin' })).toMatchObject({ id: 18, name: 'Pollo nuevo', price: 24.5, available: false })
+  expect(requests[0]).toMatchObject({ table: 'perfiles', eq: ['id', 'admin-id'], columns: 'rol' })
+  expect(requests[1].insert).toEqual([{ nombre: 'Pollo nuevo', categoria_id: 'pollos', descripcion: 'Descripción', precio: 24.5, imagen: validProduct.image, disponible: false }])
+})
+
+test('no acepta metadata editable como autorización ni crea productos sin sesión', async () => {
+  await expect(createProduct(validProduct)).rejects.toThrow('iniciar sesión')
+  expect(requests).toHaveLength(0)
+  fake.currentUser.mockResolvedValue({ data: { user: { id: 'cliente', profile: { rol: 'admin' } } } })
+  responses.push({ data: { rol: 'cliente' } })
+  await expect(createProduct(validProduct)).rejects.toThrow('Solo el Administrador')
+  expect(requests.every(request => !request.insert)).toBe(true)
+})
+
+test('valida los datos antes de consultar la sesión o realizar una escritura', async () => {
+  for (const patch of [{ name: ' ' }, { category: '' }, { price: -1 }, { price: NaN }, { price: '10' }, { available: 'true' }, { image: 'javascript:alert(1)' }]) {
+    await expect(createProduct({ ...validProduct, ...patch })).rejects.toThrow()
+  }
+  expect(fake.currentUser).not.toHaveBeenCalled()
+  expect(requests).toHaveLength(0)
+})
+
+test('no oculta una denegación de RLS aunque la comprobación previa permita al Administrador', async () => {
+  fake.currentUser.mockResolvedValue({ data: { user: { id: 'admin-id' } } })
+  responses.push({ data: { rol: 'admin' } }, { data: null, error: { message: 'new row violates row-level security policy' } })
+  await expect(createProduct(validProduct)).rejects.toThrow('row-level security')
 })
