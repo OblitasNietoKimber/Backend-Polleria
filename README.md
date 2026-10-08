@@ -44,3 +44,5 @@ Cada cuenta registrada comienza como `cliente`. Los roles posibles son `cliente`
 Para asignar roles de personal, un administrador de base de datos debe actualizar `public.perfiles.rol` con el ID confirmado del usuario. No hay cuentas de prueba ni contraseñas predeterminadas.
 
 Ver [la revisión completa](docs/revision-login-auth.md) para el estado de validación, el alcance y las limitaciones.
+
+El catálogo conectado a PostgreSQL y sus trece commits se describen en [la revisión del catálogo](docs/catalogo-productos.md), con servicios de creación y edición, permisos y pruebas locales.
