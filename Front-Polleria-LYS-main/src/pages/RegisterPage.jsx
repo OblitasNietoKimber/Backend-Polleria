@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import * as authService from '../services/authService';
 import { validateRegisterForm } from '../services/validators';
 import Logo from '../components/common/Logo';
+import SocialLogin from '../components/common/SocialLogin';
 import '../styles/login.css';
 
 const initialForm = {
@@ -220,6 +221,7 @@ function RegisterPage() {
           </button>
         </form>
 
+        <SocialLogin />
         <p className="login-page__register">
           ¿Ya tienes cuenta?{' '}
           <Link to="/login" className="login-page__link">

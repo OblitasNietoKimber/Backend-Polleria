@@ -3,10 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import * as authService from '../services/authService';
 import { validateLoginForm } from '../services/validators';
 import Logo from '../components/common/Logo';
+import SocialLogin from '../components/common/SocialLogin';
 import '../styles/login.css';
 
 function LoginPage() {
   const navigate = useNavigate();
+  const emailVerified = new URLSearchParams(window.location.search).get('insforge_status') === 'success';
 
   const [form, setForm] = useState({
     email: '',
@@ -84,6 +86,7 @@ function LoginPage() {
           Inicia sesión para continuar en Leñas y Sabores.
         </p>
 
+        {emailVerified && <p role="status">Correo verificado. Ya puedes iniciar sesión.</p>}
         <form onSubmit={handleSubmit} noValidate>
           <label
             htmlFor="login-email"
@@ -161,6 +164,7 @@ function LoginPage() {
           </button>
         </form>
 
+        <SocialLogin />
         <p className="login-page__register">
           ¿Aún no tienes cuenta?{' '}
           <Link to="/register" className="login-page__link">
