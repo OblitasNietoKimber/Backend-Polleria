@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import * as authService from '../services/authService';
 import { validateRegisterForm } from '../services/validators';
 import Logo from '../components/common/Logo';
+import SocialLogin from '../components/common/SocialLogin';
 import '../styles/login.css';
 
 const initialForm = {
@@ -108,14 +109,10 @@ function RegisterPage() {
     setLoading(true);
 
     try {
-      await authService.register(form);
-
-      await authService.login({
-        email: form.email,
-        password: form.password,
-      });
-
-      navigate('/profile');
+      const result = await authService.register(form);
+      if (result.requireEmailVerification) {
+        navigate('/verify-email', { state: { email: result.email } });
+      } else navigate('/profile');
     } catch (err) {
       setFormError(
         err.message || 'No se pudo completar el registro.'
@@ -224,6 +221,7 @@ function RegisterPage() {
           </button>
         </form>
 
+        <SocialLogin />
         <p className="login-page__register">
           ¿Ya tienes cuenta?{' '}
           <Link to="/login" className="login-page__link">

@@ -1,96 +1,46 @@
-import cocinaService from './cocinaService'
-
-const STORAGE_KEY = 'lys-client-orders'
-
+import { insforge } from '../lib/insforge';
+import { getCurrentUser } from './authService';
 export const ORDER_STATUS_STEPS = [
-  { key: 'recibido', label: 'Recibido' },
-  { key: 'preparacion', label: 'En preparación' },
-  { key: 'listo', label: 'Listo' },
-  { key: 'camino', label: 'En camino' },
-  { key: 'entregado', label: 'Entregado' },
-]
-
-function readOrders() {
-  if (typeof window === 'undefined') return []
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
-  } catch {
-    return []
-  }
+  { key: 'recibido', label: 'Recibido' }, { key: 'preparacion', label: 'En preparación' },
+  { key: 'listo', label: 'Listo' }, { key: 'camino', label: 'En camino' }, { key: 'entregado', label: 'Entregado' },
+];
+function clientId() {
+  const user = getCurrentUser();
+  if (user?.rol !== 'cliente') throw new Error('Debes iniciar sesión como cliente.');
+  return user.id;
 }
-
-function writeOrders(orders) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(orders))
-  } catch {
-    // localStorage no disponible (modo privado, cuotas, etc.)
-  }
+function unwrap({ data, error }) {
+  if (error) throw new Error(error.message);
+  return data;
 }
-
-function getOrders() {
-  return readOrders().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+function mapOrder(row) {
+  const items = (row.detalles_pedido || []).map(detail => ({
+    id: detail.producto_id, name: detail.productos?.nombre || 'Producto',
+    price: Number(detail.precio_unitario), qty: detail.cantidad,
+  }));
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const shipping = row.tipo === 'delivery' ? 6 : 0;
+  return { id: row.codigo, databaseId: row.id, items, subtotal, shipping, total: subtotal + shipping,
+    deliveryType: row.tipo, form: row.entrega, createdAt: row.creado_en, status: row.estado_id };
 }
-
-function getOrderById(id) {
-  return readOrders().find((order) => order.id === id) || null
+const columns = '*,detalles_pedido(producto_id,cantidad,precio_unitario,productos(nombre))';
+async function getOrders() {
+  const rows = unwrap(await insforge.database.from('pedidos').select(columns)
+    .eq('cliente_id', clientId()).order('creado_en', { ascending: false }));
+  return rows.map(mapOrder);
 }
-
-function createOrder({ id, items, subtotal, shipping, total, deliveryType, form, payment }) {
-  const order = {
-    id,
-    items: items.map(({ product, qty }) => ({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      qty,
-    })),
-    subtotal,
-    shipping,
-    total,
-    deliveryType,
-    form,
-    payment,
-    createdAt: new Date().toISOString(),
-  }
-
-  const orders = readOrders()
-  orders.push(order)
-  writeOrders(orders)
-  return order
+async function getOrderById(id) {
+  const row = unwrap(await insforge.database.from('pedidos').select(columns)
+    .eq('codigo', id).eq('cliente_id', clientId()).maybeSingle());
+  return row ? mapOrder(row) : null;
 }
-
-// Traduce el estado real de cocina (fuente compartida "lys_pedidos") al
-// vocabulario que usa el cliente en su stepper.
-function mapKitchenStatus(pedidoCocina, deliveryType) {
-  if (!pedidoCocina) return 'recibido'
-
-  switch (pedidoCocina.estadoCocina) {
-    case 'nuevo':
-      return 'recibido'
-    case 'en_preparacion':
-      return 'preparacion'
-    case 'listo':
-      // Si es delivery, "listo" en cocina significa que ya salió a reparto.
-      // Si es recojo en tienda, se queda en "listo" hasta que lo retiren.
-      return deliveryType === 'delivery' ? 'camino' : 'listo'
-    case 'entregado':
-      return 'entregado'
-    default:
-      return 'recibido'
-  }
+async function createOrder({ id, items, deliveryType, form }) {
+  clientId();
+  unwrap(await insforge.database.rpc('crear_pedido_cliente', {
+    p_codigo: id, p_tipo: deliveryType,
+    p_entrega: { name: form.name, phone: form.phone, address: form.address, reference: form.reference },
+    p_items: items.map(({ product, qty }) => ({ producto_id: product.id, cantidad: qty })),
+  }));
 }
-
-// Estado en tiempo real: ya no se simula con un cronómetro, se lee
-// directamente de lo que cocina/caja van actualizando.
-function getOrderStatus(order) {
-  const pedidoCocina = cocinaService.getPedidos().find((p) => p.id === order.id)
-  return mapKitchenStatus(pedidoCocina, order.deliveryType)
-}
-
-export default {
-  getOrders,
-  getOrderById,
-  createOrder,
-  getOrderStatus,
-}
+function getOrderStatus(order) { return order.status || 'recibido'; }
+export default { getOrders, getOrderById, createOrder, getOrderStatus };

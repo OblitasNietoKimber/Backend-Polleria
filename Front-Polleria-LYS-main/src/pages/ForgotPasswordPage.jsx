@@ -12,7 +12,6 @@ function ForgotPasswordPage() {
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [devCode, setDevCode] = useState(null);
   const [sentEmail, setSentEmail] = useState(null);
 
   useEffect(() => {
@@ -55,9 +54,7 @@ function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      const { code } = await authService.requestPasswordReset(email);
-
-      setDevCode(code);
+      await authService.requestPasswordReset(email);
       setSentEmail(email);
     } catch (err) {
       setFormError(
@@ -129,13 +126,7 @@ function ForgotPasswordPage() {
               className="login-page__demo-code"
               role="status"
             >
-              {devCode != null && (
-                <>
-                  Código de verificación (demo):{' '}
-                  <strong className="font-mono">{devCode}</strong>.
-                  {' '}
-                </>
-              )}
+              Si existe una cuenta con ese correo, recibirás las instrucciones de recuperación.
               Te redirigimos para ingresar el código...
             </p>
           )}

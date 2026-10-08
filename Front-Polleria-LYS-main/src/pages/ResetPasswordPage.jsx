@@ -49,6 +49,13 @@ function ResetPasswordPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [token] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('insforge_status') === 'ready' && params.get('insforge_type') === 'reset_password' ? params.get('token') : null;
+  });
+  useEffect(() => {
+    if (token) window.history.replaceState({}, '', window.location.pathname);
+  }, [token]);
   const [form, setForm] = useState({
     email: location.state?.email || '',
     code: '',
@@ -95,8 +102,9 @@ function ResetPasswordPage() {
     setFormError('');
 
     const fieldErrors = validateResetPasswordForm(form);
+    if (token) delete fieldErrors.code;
 
-    if (!form.email.trim()) {
+    if (!token && !form.email.trim()) {
       fieldErrors.email = 'Ingresa tu correo electrónico.';
     }
 
@@ -107,7 +115,7 @@ function ResetPasswordPage() {
     setLoading(true);
 
     try {
-      await authService.resetPassword(form);
+      await authService.resetPassword({ ...form, token });
       setSuccess(true);
     } catch (err) {
       setFormError(
@@ -146,7 +154,7 @@ function ResetPasswordPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} noValidate>
-            <Field
+            {!token && <Field
               label="Correo electrónico"
               name="email"
               type="email"
@@ -155,9 +163,9 @@ function ResetPasswordPage() {
               error={errors.email}
               placeholder="tucorreo@ejemplo.com"
               autoComplete="email"
-            />
+            />}
 
-            <Field
+            {!token && <Field
               label="Código de verificación"
               name="code"
               value={form.code}
@@ -165,7 +173,7 @@ function ResetPasswordPage() {
               error={errors.code}
               placeholder="123456"
               autoComplete="one-time-code"
-            />
+            />}
 
             <Field
               label="Nueva contraseña"

@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react'
 import orderService from '../services/orderService'
-
 export function useLiveOrderStatus(order, intervalMs = 15000) {
-  const [status, setStatus] = useState(() => (order ? orderService.getOrderStatus(order) : null))
-
+  const [latest, setLatest] = useState(null)
   useEffect(() => {
     if (!order) return
-    setStatus(orderService.getOrderStatus(order))
+    let active = true
     const id = setInterval(() => {
-      setStatus(orderService.getOrderStatus(order))
+      orderService.getOrderById(order.id).then(row => { if (active) setLatest(row) }).catch(() => {})
     }, intervalMs)
-    return () => clearInterval(id)
+    return () => { active = false; clearInterval(id) }
   }, [order, intervalMs])
-
-  return status
+  return orderService.getOrderStatus(latest?.id === order?.id ? latest : order || {})
 }

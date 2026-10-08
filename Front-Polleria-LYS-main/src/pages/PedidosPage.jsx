@@ -8,10 +8,14 @@ import '../styles/pedidos.css'
 export default function PedidosPage() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setOrders(orderService.getOrders())
-    setLoading(false)
+    let active = true
+    orderService.getOrders().then(rows => { if (active) setOrders(rows) })
+      .catch(error => { if (active) setError(error.message) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [])
 
   return (
@@ -28,6 +32,7 @@ export default function PedidosPage() {
         </h2>
       </div>
 
+      {error && <p role="alert">{error}</p>}
       {loading ? (
         <div className="orders-skeleton">
           <div className="orders-skeleton-card" />

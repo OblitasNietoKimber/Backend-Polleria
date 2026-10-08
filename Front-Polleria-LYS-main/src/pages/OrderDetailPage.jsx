@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, Check, Copy } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import orderService from '../services/orderService'
@@ -11,8 +11,18 @@ import '../styles/pedidos.css'
 export default function OrderDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const order = orderService.getOrderById(id)
+  const [result, setResult] = useState({ id: null, order: null, error: '' })
+  const order = result.id === id ? result.order : null
+  useEffect(() => {
+    let active = true
+    orderService.getOrderById(id).then(order => { if (active) setResult({ id, order, error: '' }) })
+      .catch(error => { if (active) setResult({ id, order: null, error: error.message }) })
+    return () => { active = false }
+  }, [id])
   const [copied, setCopied] = useState(false)
+
+  if (result.id !== id) return <p role="status">Cargando pedido...</p>
+  if (result.error) return <p role="alert">{result.error}</p>
 
   if (!order) {
     return (
