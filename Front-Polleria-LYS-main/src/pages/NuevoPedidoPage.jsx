@@ -17,6 +17,7 @@ import {
   Grid2X2,
 } from 'lucide-react';
 import { PRODUCTS } from '../data/products';
+import { SEED_MESAS } from '../data/mesasData';
 import { getProducts } from '../services/productService';
 import mesaService from '../services/mesaService';
 import authService from '../services/authService';
@@ -32,6 +33,7 @@ const CATEGORIAS_MENU = [
 
 function NuevoPedidoForm({ numeroNormalizado }) {
   const navigate = useNavigate();
+  const [todasLasMesas, setTodasLasMesas] = useState(SEED_MESAS);
   const [mesaActual, setMesaActual] = useState(null);
   const [comensales, setComensales] = useState(4);
   const [categoriaActiva, setCategoriaActiva] = useState('pollos');
@@ -44,21 +46,25 @@ function NuevoPedidoForm({ numeroNormalizado }) {
 
   useEffect(() => {
     let activo = true;
-    mesaService.getMesaByNumero(numeroNormalizado).then((mesa) => {
+    mesaService.getMesas().then((mesas) => {
       if (!activo) return;
-      if (mesa) {
-        setMesaActual(mesa);
-        setComensales(mesa.comensales || mesa.capacidad || 4);
-        if (mesa.items && mesa.items.length > 0) {
-          setItemsComanda(mesa.items.map((it) => ({
-            id: it.id,
-            nombre: it.nombre,
-            precio: it.precio,
-            cantidad: it.cantidad,
-          })));
-        }
-        if (mesa.observaciones) {
-          setObservaciones(mesa.observaciones);
+      if (mesas && mesas.length > 0) {
+        setTodasLasMesas(mesas);
+        const actual = mesas.find((m) => String(m.numero).padStart(2, '0') === numeroNormalizado);
+        if (actual) {
+          setMesaActual(actual);
+          setComensales(actual.comensales || actual.capacidad || 4);
+          if (actual.items && actual.items.length > 0) {
+            setItemsComanda(actual.items.map((it) => ({
+              id: it.id,
+              nombre: it.nombre,
+              precio: it.precio,
+              cantidad: it.cantidad,
+            })));
+          }
+          if (actual.observaciones) {
+            setObservaciones(actual.observaciones);
+          }
         }
       }
     }).catch(console.error);
