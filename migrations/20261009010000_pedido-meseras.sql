@@ -127,3 +127,83 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.agregar_items_pedido_mesera(uuid, jsonb, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.agregar_items_pedido_mesera(uuid, jsonb, text) TO authenticated;
+
+
+-- SCRUM-280: Registrar el envío del pedido a cocina
+CREATE OR REPLACE FUNCTION public.enviar_pedido_cocina_mesera(p_pedido_id uuid)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_pedido public.pedidos%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL OR public.rol_actual() NOT IN ('mesera', 'admin') THEN
+    RAISE EXCEPTION 'Solo una mesera o un administrador pueden enviar pedidos a cocina' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT * INTO v_pedido FROM public.pedidos WHERE id = p_pedido_id FOR UPDATE;
+  IF v_pedido.id IS NULL THEN
+    RAISE EXCEPTION 'El pedido no existe' USING ERRCODE = '22023';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM public.detalles_pedido WHERE pedido_id = p_pedido_id) THEN
+    RAISE EXCEPTION 'No se puede enviar un pedido sin productos a cocina' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_pedido.estado_id = 'recibido' THEN
+    UPDATE public.pedidos SET estado_id = 'preparacion' WHERE id = p_pedido_id;
+  END IF;
+
+  RETURN p_pedido_id;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.enviar_pedido_cocina_mesera(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.enviar_pedido_cocina_mesera(uuid) TO authenticated;
+
+-- SCRUM-281: Registrar la solicitud de cuenta para caja
+CREATE OR REPLACE FUNCTION public.solicitar_cuenta_mesa(p_pedido_id uuid)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_pedido public.pedidos%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL OR public.rol_actual() NOT IN ('mesera', 'admin') THEN
+    RAISE EXCEPTION 'Solo una mesera o un administrador pueden solicitar la cuenta' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT * INTO v_pedido FROM public.pedidos WHERE id = p_pedido_id FOR UPDATE;
+  IF v_pedido.id IS NULL THEN
+    RAISE EXCEPTION 'El pedido no existe' USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE public.pedidos SET cuenta_solicitada = true WHERE id = p_pedido_id;
+
+  RETURN p_pedido_id;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.solicitar_cuenta_mesa(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.solicitar_cuenta_mesa(uuid) TO authenticated;
+
+-- Función de servidor para liberar mesa
+CREATE OR REPLACE FUNCTION public.liberar_mesa(p_mesa_id bigint)
+RETURNS bigint LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_mesa public.mesas%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL OR public.rol_actual() NOT IN ('mesera', 'admin') THEN
+    RAISE EXCEPTION 'Solo una mesera o un administrador pueden liberar la mesa' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT * INTO v_mesa FROM public.mesas WHERE id = p_mesa_id FOR UPDATE;
+  IF v_mesa.id IS NULL THEN
+    RAISE EXCEPTION 'La mesa no existe' USING ERRCODE = '22023';
+  END IF;
+
+  UPDATE public.pedidos
+  SET estado_id = 'entregado'
+  WHERE mesa_id = p_mesa_id AND tipo = 'salon' AND estado_id NOT IN ('entregado', 'cancelado');
+
+  UPDATE public.mesas SET estado = 'libre' WHERE id = p_mesa_id;
+
+  RETURN p_mesa_id;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.liberar_mesa(bigint) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.liberar_mesa(bigint) TO authenticated;
