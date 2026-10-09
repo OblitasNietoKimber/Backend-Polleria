@@ -20,9 +20,32 @@ export default function useMesas(zona = 'salon_principal') {
   }, []);
 
   useEffect(() => {
-    recargar();
+    let montado = true;
+
+    async function cargarInicial() {
+      try {
+        const data = await mesaService.getMesas();
+        if (montado) {
+          setListaCompleta(data || []);
+          setError(null);
+        }
+      } catch (err) {
+        if (montado) {
+          setError(err.message || 'Error al conectar con PostgreSQL.');
+        }
+      } finally {
+        if (montado) {
+          setLoading(false);
+        }
+      }
+    }
+
+    cargarInicial();
     const timer = setInterval(recargar, 10000);
-    return () => clearInterval(timer);
+    return () => {
+      montado = false;
+      clearInterval(timer);
+    };
   }, [recargar]);
 
   // Filtrar mesas por la zona seleccionada
