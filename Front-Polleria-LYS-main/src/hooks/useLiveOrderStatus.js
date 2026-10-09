@@ -6,7 +6,8 @@ export function useLiveOrderStatus(order, intervalMs = 15000) {
     if (!order) return
     let active = true
     const id = setInterval(() => {
-      orderService.getOrderById(order.id).then(row => { if (active) setLatest(row) }).catch(() => {})
+      if (document.visibilityState === 'hidden') return
+      orderService.getOrderState(order.id).then(row => { if (active && row) setLatest({ id: order.id, status: row.estado_id }) }).catch(() => {})
     }, intervalMs)
     return () => { active = false; clearInterval(id) }
   }, [order, intervalMs])

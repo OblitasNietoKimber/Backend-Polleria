@@ -1,22 +1,29 @@
 import { useEffect, useState } from 'react'
 import { PackageSearch } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import orderService from '../services/orderService'
+import orderService, { ORDER_PAGE_SIZE } from '../services/orderService'
 import OrderHistoryList from '../components/orders/OrderHistoryList'
 import '../styles/pedidos.css'
 
 export default function PedidosPage() {
   const [orders, setOrders] = useState([])
+  const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
     let active = true
-    orderService.getOrders().then(rows => { if (active) setOrders(rows) })
+    orderService.getOrders({ page }).then(rows => { if (active) setOrders(rows) })
       .catch(error => { if (active) setError(error.message) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [])
+  }, [page])
+
+  function changePage(nextPage) {
+    setLoading(true)
+    setError('')
+    setPage(nextPage)
+  }
 
   return (
     <section className="orders-page">
@@ -39,16 +46,24 @@ export default function PedidosPage() {
           <div className="orders-skeleton-card" />
           <div className="orders-skeleton-card" />
         </div>
-      ) : orders.length === 0 ? (
+      ) : error ? null : orders.length === 0 ? (
         <div className="orders-empty">
           <PackageSearch size={40} strokeWidth={1.4} color="var(--ember)" />
-          <p>Todavía no tienes pedidos.</p>
+          <p>{page === 0 ? 'Todavía no tienes pedidos.' : 'No hay más pedidos.'}</p>
+          {page > 0 && <button className="btn-ember" onClick={() => changePage(page - 1)}>Volver a la página anterior</button>}
           <Link to="/catalogo" className="btn-ember">
             Ver el menú
           </Link>
         </div>
       ) : (
-        <OrderHistoryList orders={orders} />
+        <>
+          <OrderHistoryList orders={orders} />
+          <nav aria-label="Páginas de pedidos" className="orders-pagination">
+            <button className="btn-ember" disabled={page === 0} onClick={() => changePage(page - 1)}>Anterior</button>
+            <span>Página {page + 1}</span>
+            <button className="btn-ember" disabled={orders.length < ORDER_PAGE_SIZE} onClick={() => changePage(page + 1)}>Siguiente</button>
+          </nav>
+        </>
       )}
     </section>
   )

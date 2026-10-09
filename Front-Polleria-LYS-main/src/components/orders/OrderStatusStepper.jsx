@@ -5,6 +5,8 @@ import { useLiveOrderStatus } from '../../hooks/useLiveOrderStatus'
 export default function OrderStatusStepper({ order }) {
   const currentStatus = useLiveOrderStatus(order)
 
+  if (currentStatus === 'cancelado') return <p role="status">Este pedido fue cancelado.</p>
+
   const steps =
     order.deliveryType === 'delivery'
       ? ORDER_STATUS_STEPS

@@ -4,3 +4,21 @@
 node_modules/
 dist/
 *.log
+
+# InsForge & AI agent skills
+.insforge
+.agent
+.agents
+.augment
+.claude
+.cline
+.github/copilot*
+.kilocode
+.qoder
+.qwen
+.roo
+.trae
+.windsurf
+
+# Credenciales y contexto local de InsForge
+.insforge/
