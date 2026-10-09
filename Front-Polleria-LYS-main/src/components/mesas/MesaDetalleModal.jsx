@@ -54,52 +54,33 @@ export default function MesaDetalleModal({ mesa, onClose, onMesaUpdated }) {
     onClose();
   }
 
-  function handleLiberarMesa() {
+  async function handleLiberarMesa() {
     if (window.confirm(`¿Confirmas liberar la Mesa ${numero}?`)) {
-      mesaService.liberarMesa(numero);
-      mesaService.registrarActividad({
-        mesaNumero: numero,
-        tipo: 'pedido_completado',
-        titulo: `Mesa ${numero}`,
-        descripcion: 'Mesa liberada',
-        ordenCodigo: mesa.pedidoId ? `Orden ${mesa.pedidoId}` : '',
-        tipoColor: 'verde',
-      });
-      if (onMesaUpdated) onMesaUpdated();
-      onClose();
+      try {
+        await mesaService.liberarMesa({ mesaId: mesa.id });
+        if (onMesaUpdated) onMesaUpdated();
+        onClose();
+      } catch (err) {
+        console.error('Error al liberar mesa en PostgreSQL:', err);
+        alert(err.message || 'Error al liberar la mesa.');
+      }
     }
   }
 
-  function handleSolicitarCuenta() {
+  async function handleSolicitarCuenta() {
     if (mesa.pedidoId) {
       try {
-        const raw = localStorage.getItem('lys_pedidos');
-        const pedidos = raw ? JSON.parse(raw) : [];
-        const actualizados = pedidos.map((p) => {
-          if (p.id === mesa.pedidoId) {
-            return { ...p, cuentaSolicitada: true };
-          }
-          return p;
-        });
-        localStorage.setItem('lys_pedidos', JSON.stringify(actualizados));
-        window.dispatchEvent(new Event('storage'));
+        await mesaService.solicitarCuentaMesa({ pedidoId: mesa.pedidoId });
+        alert(`Se ha solicitado la cuenta de la Mesa ${numero} para Caja.`);
+        if (onMesaUpdated) onMesaUpdated();
+        onClose();
       } catch (err) {
-        console.error(err);
+        console.error('Error al solicitar cuenta en PostgreSQL:', err);
+        alert(err.message || 'Error al solicitar cuenta para caja.');
       }
+    } else {
+      alert(`La Mesa ${numero} no cuenta con un pedido activo.`);
     }
-
-    mesaService.registrarActividad({
-      mesaNumero: numero,
-      tipo: 'pedido_actualizado',
-      titulo: `Mesa ${numero}`,
-      descripcion: 'Cuenta solicitada a caja',
-      ordenCodigo: mesa.pedidoId || '',
-      tipoColor: 'amarillo',
-    });
-
-    alert(`Se ha solicitado la cuenta de la Mesa ${numero} para Caja.`);
-    if (onMesaUpdated) onMesaUpdated();
-    onClose();
   }
 
   function handleCancelarReserva() {
