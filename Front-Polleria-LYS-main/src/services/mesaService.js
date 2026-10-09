@@ -1,209 +1,175 @@
-import { SEED_MESAS, SEED_ACTIVIDADES, ESTADOS_MESA } from '../data/mesasData';
+import { insforge, configurationError } from '../lib/insforge';
+import { SEED_MESAS, ESTADOS_MESA } from '../data/mesasData';
 
-const MESAS_KEY = 'lys_mesas';
-const ACTIVIDADES_KEY = 'lys_actividades';
-const PEDIDOS_KEY = 'lys_pedidos';
-
-function inicializar() {
-  if (typeof window === 'undefined') return;
-
-  const dataMesas = localStorage.getItem(MESAS_KEY);
-  if (!dataMesas) {
-    localStorage.setItem(MESAS_KEY, JSON.stringify(SEED_MESAS));
-  } else {
-    try {
-      const mesas = JSON.parse(dataMesas);
-      const zonasDef = { '11': 'terraza', '12': 'terraza', '13': 'terraza', '14': 'terraza', '15': 'segundo_piso', '16': 'segundo_piso' };
-      const tiemposDemo = { '03': 25, '05': 41, '10': 15, '13': 55, '15': 35 };
-      const ahora = Date.now();
-      let huboCambio = false;
-
-      const actualizadas = mesas.map((m) => {
-        let mesaModificada = { ...m };
-
-        // Asegurar asignación de zonas
-        if (zonasDef[m.numero] && m.zona === 'salon_principal') {
-          huboCambio = true;
-          mesaModificada.zona = zonasDef[m.numero];
-        }
-
-        // Auto-reparar timestamps antiguos guardados hace días en localStorage
-        if (mesaModificada.estado === ESTADOS_MESA.OCUPADA && mesaModificada.inicioAt) {
-          const diffMin = (ahora - new Date(mesaModificada.inicioAt).getTime()) / 60000;
-          // Si el timestamp tiene más de 3 horas (180 min) o es del pasado lejano por días
-          if (diffMin > 180 || diffMin < 0) {
-            huboCambio = true;
-            const minSimulados = tiemposDemo[mesaModificada.numero] || 20;
-            mesaModificada.inicioAt = new Date(ahora - minSimulados * 60000).toISOString();
-          }
-        }
-
-        return mesaModificada;
-      });
-
-      if (huboCambio) {
-        localStorage.setItem(MESAS_KEY, JSON.stringify(actualizadas));
-      }
-    } catch {
-      // Ignorar error de parsing
-    }
-  }
-
-  if (!localStorage.getItem(ACTIVIDADES_KEY)) {
-    localStorage.setItem(ACTIVIDADES_KEY, JSON.stringify(SEED_ACTIVIDADES));
-  }
+function database() {
+  if (configurationError) throw new Error(configurationError);
+  return insforge?.database;
 }
 
-function getMesasRaw() {
-  inicializar();
-  try {
-    const data = localStorage.getItem(MESAS_KEY);
-    return data ? JSON.parse(data) : SEED_MESAS;
-  } catch (error) {
-    console.error('Error al leer mesas:', error);
-    return SEED_MESAS;
-  }
-}
-
-function saveMesas(mesas) {
-  try {
-    localStorage.setItem(MESAS_KEY, JSON.stringify(mesas));
-    // Disparar evento para sincronización local inmediata
-    window.dispatchEvent(new Event('lys_mesas_updated'));
-  } catch (error) {
-    console.error('Error al guardar mesas:', error);
-  }
+function unwrap({ data, error }, fallbackMsg = 'Error en la base de datos.') {
+  if (error) throw new Error(error.message || fallbackMsg);
+  return data;
 }
 
 /**
- * Retorna las mesas sincronizadas con los pedidos actuales de lys_pedidos.
- * Si un pedido asociado está pagado, la mesa puede liberarse automáticamente o reflejar el estado actual.
+ * SCRUM-277: Consultar el estado de las mesas y sus pedidos activos directamente desde PostgreSQL.
  */
-export function getMesas() {
-  const mesas = getMesasRaw();
-  let pedidos = [];
+export async function getMesas() {
+  const db = database();
+  if (!db) return SEED_MESAS;
 
-  try {
-    const rawPedidos = localStorage.getItem(PEDIDOS_KEY);
-    pedidos = rawPedidos ? JSON.parse(rawPedidos) : [];
-  } catch {
-    pedidos = [];
+  const { data: mesasData, error: mesasError } = await db
+    .from('mesas')
+    .select('id, numero, capacidad, forma, zona, estado')
+    .order('id');
+
+  if (mesasError) {
+    throw new Error(mesasError.message || 'Error al consultar mesas desde PostgreSQL.');
   }
 
-  // Sincronizar montos y estados en vivo con lys_pedidos
-  let huboCambios = false;
-  const mesasSincronizadas = mesas.map((m) => {
-    if (m.estado === ESTADOS_MESA.OCUPADA && m.pedidoId) {
-      const pedido = pedidos.find((p) => p.id === m.pedidoId);
-      if (pedido) {
-        // Calcular total actual del pedido
-        const total = pedido.items?.reduce((acc, it) => acc + (it.cantidad * it.precio), 0) || 0;
-        if (total > 0 && total !== m.totalAcumulado) {
-          huboCambios = true;
-          return { ...m, totalAcumulado: total };
-        }
-      }
-    }
-    return m;
+  // Consultar pedidos activos de tipo salón
+  const { data: pedidosActivos, error: pedidosError } = await db
+    .from('pedidos')
+    .select('id, codigo, mesa_id, estado_id, cuenta_solicitada, observaciones, comensales, creado_en, detalles_pedido(producto_id, cantidad, precio_unitario, nombre_producto)')
+    .eq('tipo', 'salon')
+    .not('estado_id', 'in', '("entregado","cancelado")');
+
+  if (pedidosError) {
+    throw new Error(pedidosError.message || 'Error al consultar pedidos activos de salón.');
+  }
+
+  const pedidosPorMesa = new Map();
+  for (const pedido of (pedidosActivos || [])) {
+    pedidosPorMesa.set(Number(pedido.mesa_id), pedido);
+  }
+
+  return (mesasData || []).map((m) => {
+    const mesaId = Number(m.id);
+    const pedido = pedidosPorMesa.get(mesaId);
+    const tienePedidoActivo = Boolean(pedido);
+    const total = pedido?.detalles_pedido?.reduce(
+      (sum, d) => sum + (Number(d.cantidad) * Number(d.precio_unitario)),
+      0
+    ) || 0;
+
+    return {
+      id: mesaId,
+      numero: String(m.numero).padStart(2, '0'),
+      capacidad: m.capacidad,
+      forma: m.forma,
+      zona: m.zona,
+      estado: tienePedidoActivo ? ESTADOS_MESA.OCUPADA : (m.estado || ESTADOS_MESA.LIBRE),
+      pedidoId: pedido ? pedido.id : null,
+      ordenCodigo: pedido ? pedido.codigo : null,
+      comensales: pedido?.comensales || m.capacidad,
+      observaciones: pedido?.observaciones || '',
+      cuentaSolicitada: Boolean(pedido?.cuenta_solicitada),
+      totalAcumulado: Number(total.toFixed(2)),
+      inicioAt: pedido?.creado_en || null,
+      items: (pedido?.detalles_pedido || []).map((d) => ({
+        id: d.producto_id,
+        nombre: d.nombre_producto || 'Producto',
+        cantidad: d.cantidad,
+        precio: Number(d.precio_unitario),
+      })),
+    };
   });
-
-  if (huboCambios) {
-    saveMesas(mesasSincronizadas);
-  }
-
-  return mesasSincronizadas;
 }
 
-export function getMesaById(id) {
-  const mesas = getMesas();
-  return mesas.find((m) => m.id === Number(id)) || null;
-}
-
-export function getMesaByNumero(numero) {
-  const mesas = getMesas();
+/**
+ * Consulta una mesa específica por su número desde PostgreSQL.
+ */
+export async function getMesaByNumero(numero) {
+  const mesas = await getMesas();
   const numNormalizado = String(numero).padStart(2, '0');
   return mesas.find((m) => String(m.numero).padStart(2, '0') === numNormalizado) || null;
 }
 
-export function ocuparMesa(numero, pedidoId, total = 0) {
-  const mesas = getMesas();
-  const numNormalizado = String(numero).padStart(2, '0');
+/**
+ * SCRUM-278 & SCRUM-282: Abrir pedido de salón y ocupar mesa mediante RPC transaccional.
+ */
+export async function abrirPedidoMesa({ mesaId, comensales = 1, codigo = null, observaciones = '' }) {
+  const db = database();
+  const codPedido = codigo || `PED-${String(mesaId).padStart(2, '0')}-${Date.now().toString().slice(-4)}`;
 
-  const actualizadas = mesas.map((m) => {
-    if (String(m.numero).padStart(2, '0') === numNormalizado) {
-      return {
-        ...m,
-        estado: ESTADOS_MESA.OCUPADA,
-        pedidoId,
-        inicioAt: new Date().toISOString(),
-        totalAcumulado: total,
-        horaReserva: null,
-        clienteReserva: null,
-        telefonoReserva: null,
-        comensalesReserva: null,
-      };
-    }
-    return m;
+  const res = await db.rpc('abrir_pedido_mesera', {
+    p_mesa_id: Number(mesaId),
+    p_codigo: codPedido,
+    p_comensales: Number(comensales),
+    p_observaciones: observaciones || '',
   });
 
-  saveMesas(actualizadas);
-  return actualizadas.find((m) => String(m.numero).padStart(2, '0') === numNormalizado);
+  const pedidoId = unwrap(res, 'No se pudo abrir el pedido en el servidor.');
+  return { pedidoId, codigo: codPedido };
 }
 
-export function liberarMesa(numero) {
-  const mesas = getMesas();
-  const numNormalizado = String(numero).padStart(2, '0');
+/**
+ * SCRUM-279: Agregar productos y observaciones con precios verificados en el servidor.
+ */
+export async function agregarItemsPedido({ pedidoId, items, observaciones = null }) {
+  const db = database();
+  const payloadItems = items.map((it) => ({
+    producto_id: Number(it.id || it.producto_id),
+    cantidad: Number(it.cantidad || it.qty || 1),
+  }));
 
-  const actualizadas = mesas.map((m) => {
-    if (String(m.numero).padStart(2, '0') === numNormalizado) {
-      return {
-        ...m,
-        estado: ESTADOS_MESA.LIBRE,
-        pedidoId: null,
-        inicioAt: null,
-        totalAcumulado: 0,
-        horaReserva: null,
-        clienteReserva: null,
-        telefonoReserva: null,
-        comensalesReserva: null,
-      };
-    }
-    return m;
+  const res = await db.rpc('agregar_items_pedido_mesera', {
+    p_pedido_id: pedidoId,
+    p_items: payloadItems,
+    p_observaciones: observaciones,
   });
 
-  saveMesas(actualizadas);
-  return actualizadas.find((m) => String(m.numero).padStart(2, '0') === numNormalizado);
+  return unwrap(res, 'No se pudieron registrar los productos en la comanda.');
 }
 
-export function reservarMesa(numero, { cliente, hora, comensales, telefono } = {}) {
-  const mesas = getMesas();
-  const numNormalizado = String(numero).padStart(2, '0');
-
-  const actualizadas = mesas.map((m) => {
-    if (String(m.numero).padStart(2, '0') === numNormalizado) {
-      return {
-        ...m,
-        estado: ESTADOS_MESA.RESERVADA,
-        horaReserva: hora || '20:00',
-        clienteReserva: (cliente || 'Cliente Reserva').trim(),
-        telefonoReserva: (telefono || '').trim(),
-        comensalesReserva: Number(comensales) || m.capacidad,
-      };
-    }
-    return m;
+/**
+ * SCRUM-280: Enviar comanda a cocina y actualizar estado.
+ */
+export async function enviarCocina({ pedidoId }) {
+  const db = database();
+  const res = await db.rpc('enviar_pedido_cocina_mesera', {
+    p_pedido_id: pedidoId,
   });
-
-  saveMesas(actualizadas);
-  return actualizadas.find((m) => String(m.numero).padStart(2, '0') === numNormalizado);
+  return unwrap(res, 'No se pudo registrar el envío a cocina.');
 }
 
-export function getEstadisticasMesas(zona = 'salon_principal') {
-  const mesas = getMesas().filter((m) => !zona || m.zona === zona);
-  const total = mesas.length || 1;
+/**
+ * SCRUM-281: Registrar la solicitud de cuenta para caja.
+ */
+export async function solicitarCuentaMesa({ pedidoId }) {
+  const db = database();
+  const res = await db.rpc('solicitar_cuenta_mesa', {
+    p_pedido_id: pedidoId,
+  });
+  return unwrap(res, 'No se pudo solicitar la cuenta en el servidor.');
+}
 
-  const libres = mesas.filter((m) => m.estado === ESTADOS_MESA.LIBRE).length;
-  const ocupadas = mesas.filter((m) => m.estado === ESTADOS_MESA.OCUPADA).length;
-  const reservadas = mesas.filter((m) => m.estado === ESTADOS_MESA.RESERVADA).length;
+/**
+ * Liberar mesa y concluir su pedido activo.
+ */
+export async function liberarMesa({ mesaId }) {
+  const db = database();
+  const res = await db.rpc('liberar_mesa', {
+    p_mesa_id: Number(mesaId),
+  });
+  return unwrap(res, 'No se pudo liberar la mesa en el servidor.');
+}
+
+export function getMinutosOcupada(inicioAt) {
+  if (!inicioAt) return 0;
+  const diffMs = Date.now() - new Date(inicioAt).getTime();
+  const mins = Math.max(0, Math.floor(diffMs / 60000));
+  if (mins > 180) return 35;
+  return mins;
+}
+
+export function getEstadisticasMesas(mesas = [], zona = 'salon_principal') {
+  const lista = (mesas || []).filter((m) => !zona || m.zona === zona);
+  const total = lista.length || 1;
+
+  const libres = lista.filter((m) => m.estado === ESTADOS_MESA.LIBRE).length;
+  const ocupadas = lista.filter((m) => m.estado === ESTADOS_MESA.OCUPADA).length;
+  const reservadas = lista.filter((m) => m.estado === ESTADOS_MESA.RESERVADA).length;
 
   return {
     total,
@@ -216,58 +182,14 @@ export function getEstadisticasMesas(zona = 'salon_principal') {
   };
 }
 
-export function getActividades() {
-  inicializar();
-  try {
-    const raw = localStorage.getItem(ACTIVIDADES_KEY);
-    return raw ? JSON.parse(raw) : SEED_ACTIVIDADES;
-  } catch {
-    return SEED_ACTIVIDADES;
-  }
-}
-
-export function registrarActividad({ mesaNumero, tipo, titulo, descripcion, ordenCodigo, tipoColor }) {
-  const actividades = getActividades();
-  const ahora = new Date();
-  const horaStr = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  const nuevaActividad = {
-    id: `ACT-${Date.now()}`,
-    mesaNumero: String(mesaNumero).padStart(2, '0'),
-    tipo: tipo || 'pedido_creado',
-    titulo: titulo || `Mesa ${String(mesaNumero).padStart(2, '0')}`,
-    descripcion: descripcion || 'Pedido actualizado',
-    ordenCodigo: ordenCodigo || '',
-    hora: horaStr,
-    tipoColor: tipoColor || 'rojo',
-    createdAt: ahora.toISOString(),
-  };
-
-  const listaActualizada = [nuevaActividad, ...actividades].slice(0, 20); // guardar últimas 20
-  localStorage.setItem(ACTIVIDADES_KEY, JSON.stringify(listaActualizada));
-  window.dispatchEvent(new Event('lys_actividades_updated'));
-  return nuevaActividad;
-}
-
-export function getMinutosOcupada(inicioAt) {
-  if (!inicioAt) return 0;
-  const diffMs = Date.now() - new Date(inicioAt).getTime();
-  const mins = Math.max(0, Math.floor(diffMs / 60000));
-  // Si supera 3 horas por timestamps desfasados en localStorage, acotar a un tiempo de consumo realista
-  if (mins > 180) return 35;
-  return mins;
-}
-
 export default {
   getMesas,
-  getMesaById,
   getMesaByNumero,
-  ocuparMesa,
+  abrirPedidoMesa,
+  agregarItemsPedido,
+  enviarCocina,
+  solicitarCuentaMesa,
   liberarMesa,
-  reservarMesa,
-  getEstadisticasMesas,
-  getActividades,
-  registrarActividad,
   getMinutosOcupada,
+  getEstadisticasMesas,
 };
-
