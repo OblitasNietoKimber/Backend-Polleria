@@ -63,6 +63,12 @@ function NuevoPedidoForm({ numeroNormalizado }) {
       }
     }).catch(console.error);
 
+    getProducts().then((prods) => {
+      if (activo && prods && prods.length > 0) {
+        setCatalogoProductos(prods);
+      }
+    }).catch(console.error);
+
     return () => { activo = false; };
   }, [numeroNormalizado]);
 
@@ -82,14 +88,14 @@ function NuevoPedidoForm({ numeroNormalizado }) {
     return usuario?.nombre ? `${usuario.nombre} ${usuario.apellido || ''}`.trim() : 'Ana Rodríguez';
   });
 
-  // Filtrar productos
+  // Filtrar productos del catálogo de InsForge
   const productosFiltrados = useMemo(() => {
-    return PRODUCTS.filter((prod) => {
+    return (catalogoProductos || []).filter((prod) => {
       const matchCat = categoriaActiva === 'todos' || prod.category === categoriaActiva;
       const matchSearch = prod.name.toLowerCase().includes(busqueda.toLowerCase());
       return matchCat && matchSearch;
     });
-  }, [categoriaActiva, busqueda]);
+  }, [catalogoProductos, categoriaActiva, busqueda]);
 
   // Manipulación de comanda
   function handleAgregarItem(producto) {
@@ -178,76 +184,45 @@ function NuevoPedidoForm({ numeroNormalizado }) {
     setBorradorPendiente(null);
   }
 
-  function handleEnviarCocina() {
+  async function handleEnviarCocina() {
     if (itemsComanda.length === 0) {
       alert('La comanda está vacía. Selecciona al menos un producto.');
       return;
     }
 
+    setEnviando(true);
     try {
-      const rawPedidos = localStorage.getItem('lys_pedidos');
-      const pedidos = rawPedidos ? JSON.parse(rawPedidos) : [];
+      let pedidoId = mesaActual?.pedidoId;
 
-      // Si ya existía un pedido de esta mesa se actualiza, si no, se crea uno nuevo
-      const pedidoExistenteId = mesaActual?.pedidoId;
-      const nuevoId = pedidoExistenteId || `PED-${1000 + pedidos.length + 1}`;
-
-      const nuevoPedido = {
-        id: nuevoId,
-        mesa: Number(numeroNormalizado),
-        cliente: `Mesa ${numeroNormalizado}`,
-        mesera: meseraNombre,
-        comensales: Number(comensales),
-        estadoCocina: 'nuevo', // Notifica a cocina
-        estado: 'pendiente',   // Notifica a caja
-        observaciones: observaciones.trim(),
-        items: itemsComanda.map((it) => ({
-          id: it.id,
-          nombre: it.nombre,
-          imagen: it.imagen,
-          cantidad: it.cantidad,
-          precio: it.precio,
-          observacion: '',
-        })),
-        subtotal: Number(subtotal.toFixed(2)),
-        igv: Number(igv.toFixed(2)),
-        total: Number(total.toFixed(2)),
-        createdAt: new Date().toISOString(),
-      };
-
-      let pedidosActualizados;
-      if (pedidoExistenteId) {
-        pedidosActualizados = pedidos.map((p) => (p.id === pedidoExistenteId ? nuevoPedido : p));
-      } else {
-        pedidosActualizados = [...pedidos, nuevoPedido];
+      // Abrir pedido si no existe
+      if (!pedidoId) {
+        const apertura = await mesaService.abrirPedidoMesa({
+          mesaId: mesaActual?.id || Number(numeroNormalizado),
+          comensales: Number(comensales) || 1,
+          observaciones: observaciones.trim(),
+        });
+        pedidoId = apertura.pedidoId;
       }
 
-      localStorage.setItem('lys_pedidos', JSON.stringify(pedidosActualizados));
-
-      // Limpiar cualquier borrador pendiente de esta mesa
-      localStorage.removeItem(`lys_borrador_mesa_${numeroNormalizado}`);
-
-      // Actualizar mesa a ocupada
-      mesaService.ocuparMesa(numeroNormalizado, nuevoId, total);
-
-      // Registrar actividad
-      mesaService.registrarActividad({
-        mesaNumero: numeroNormalizado,
-        tipo: 'pedido_creado',
-        titulo: `Mesa ${numeroNormalizado}`,
-        descripcion: pedidoExistenteId ? 'Comanda actualizada y enviada a cocina' : 'Nuevo pedido enviado a cocina',
-        ordenCodigo: `Orden #${nuevoId}`,
-        tipoColor: 'rojo',
+      // Persistir productos y observaciones con precios de servidor
+      await mesaService.agregarItemsPedido({
+        pedidoId,
+        items: itemsComanda,
+        observaciones: observaciones.trim(),
       });
 
-      // Disparar storage para sincronizar panel de cocina y mesas
-      window.dispatchEvent(new Event('storage'));
+      // Enviar a cocina
+      await mesaService.enviarCocina({ pedidoId });
+
+      localStorage.removeItem(`lys_borrador_mesa_${numeroNormalizado}`);
 
       alert(`¡Pedido de Mesa ${numeroNormalizado} enviado a Cocina con éxito!`);
       navigate('/mesas');
     } catch (err) {
-      console.error('Error al enviar a cocina:', err);
-      alert('Ocurrió un error al enviar el pedido a cocina.');
+      console.error('Error al enviar comanda al servidor:', err);
+      alert(err.message || 'Ocurrió un error al enviar el pedido a cocina.');
+    } finally {
+      setEnviando(false);
     }
   }
 
