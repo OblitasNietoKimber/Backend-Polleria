@@ -536,11 +536,12 @@ function NuevoPedidoForm({ numeroNormalizado }) {
             <button
               type="button"
               className="btn-enviar-cocina"
+              disabled={enviando}
               onClick={handleEnviarCocina}
               title="Enviar comanda a la pantalla de cocina"
             >
               <ChefHat size={18} className="np-btn-icon-inline" />
-              Enviar a cocina
+              {enviando ? 'Enviando a cocina...' : 'Enviar a cocina'}
             </button>
           </div>
         </aside>
