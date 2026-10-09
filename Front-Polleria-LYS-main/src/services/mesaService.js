@@ -87,20 +87,36 @@ export async function getMesaByNumero(numero) {
 
 /**
  * SCRUM-278 & SCRUM-282: Abrir pedido de salón y ocupar mesa mediante RPC transaccional.
+ * Impide la apertura de múltiples pedidos activos en una misma mesa.
  */
 export async function abrirPedidoMesa({ mesaId, comensales = 1, codigo = null, observaciones = '' }) {
   const db = database();
-  const codPedido = codigo || `PED-${String(mesaId).padStart(2, '0')}-${Date.now().toString().slice(-4)}`;
+  const idMesa = Number(mesaId);
+
+  // Verificación preventiva en cliente para rechazo inmediato
+  const mesas = await getMesas();
+  const mesa = mesas.find((m) => m.id === idMesa);
+  if (mesa && mesa.pedidoId) {
+    throw new Error(`La Mesa ${mesa.numero} ya cuenta con un pedido activo.`);
+  }
+
+  const codPedido = codigo || `PED-${String(idMesa).padStart(2, '0')}-${Date.now().toString().slice(-4)}`;
 
   const res = await db.rpc('abrir_pedido_mesera', {
-    p_mesa_id: Number(mesaId),
+    p_mesa_id: idMesa,
     p_codigo: codPedido,
     p_comensales: Number(comensales),
     p_observaciones: observaciones || '',
   });
 
-  const pedidoId = unwrap(res, 'No se pudo abrir el pedido en el servidor.');
-  return { pedidoId, codigo: codPedido };
+  if (res.error) {
+    if (res.error.code === '23505' || res.error.message?.includes('activo') || res.error.message?.includes('cuenta con un pedido')) {
+      throw new Error('La mesa ya cuenta con un pedido activo en el servidor.');
+    }
+    throw new Error(res.error.message || 'No se pudo abrir el pedido en el servidor.');
+  }
+
+  return { pedidoId: res.data, codigo: codPedido };
 }
 
 /**
