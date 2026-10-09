@@ -58,3 +58,72 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.abrir_pedido_mesera(bigint, text, integer, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.abrir_pedido_mesera(bigint, text, integer, text) TO authenticated;
+
+
+-- SCRUM-279: Permitir agregar productos y observaciones a un pedido abierto
+CREATE OR REPLACE FUNCTION public.agregar_items_pedido_mesera(
+  p_pedido_id uuid,
+  p_items jsonb,
+  p_observaciones text DEFAULT NULL
+) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_pedido public.pedidos%ROWTYPE;
+  v_item jsonb;
+  v_producto public.productos%ROWTYPE;
+  v_cantidad integer;
+BEGIN
+  IF auth.uid() IS NULL OR public.rol_actual() NOT IN ('mesera', 'admin') THEN
+    RAISE EXCEPTION 'Solo una mesera o un administrador pueden modificar la comanda' USING ERRCODE = '42501';
+  END IF;
+
+  IF jsonb_typeof(p_items) IS DISTINCT FROM 'array' OR jsonb_array_length(p_items) = 0 OR jsonb_array_length(p_items) > 100 THEN
+    RAISE EXCEPTION 'La comanda debe contener entre 1 y 100 productos' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT * INTO v_pedido FROM public.pedidos WHERE id = p_pedido_id FOR UPDATE;
+  IF v_pedido.id IS NULL THEN
+    RAISE EXCEPTION 'El pedido no existe' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_pedido.tipo <> 'salon' THEN
+    RAISE EXCEPTION 'Solo se pueden agregar productos a pedidos de salón' USING ERRCODE = '22023';
+  END IF;
+
+  IF v_pedido.estado_id IN ('entregado', 'cancelado') THEN
+    RAISE EXCEPTION 'No se pueden agregar productos a un pedido finalizado o cancelado' USING ERRCODE = '22023';
+  END IF;
+
+  FOR v_item IN SELECT value FROM jsonb_array_elements(p_items) LOOP
+    IF jsonb_typeof(v_item) IS DISTINCT FROM 'object'
+       OR COALESCE(v_item->>'producto_id','') !~ '^[1-9][0-9]{0,17}$'
+       OR COALESCE(v_item->>'cantidad','') !~ '^[1-9][0-9]{0,2}$'
+       OR (v_item->>'cantidad')::integer > 100 THEN
+      RAISE EXCEPTION 'Producto o cantidad inválidos' USING ERRCODE = '22023';
+    END IF;
+
+    SELECT * INTO v_producto FROM public.productos WHERE id = (v_item->>'producto_id')::bigint AND disponible FOR SHARE;
+    IF v_producto.id IS NULL THEN
+      RAISE EXCEPTION 'Uno de los productos ya no está disponible' USING ERRCODE = '22023';
+    END IF;
+
+    v_cantidad := (v_item->>'cantidad')::integer;
+
+    IF EXISTS (SELECT 1 FROM public.detalles_pedido WHERE pedido_id = p_pedido_id AND producto_id = v_producto.id) THEN
+      UPDATE public.detalles_pedido
+      SET cantidad = cantidad + v_cantidad
+      WHERE pedido_id = p_pedido_id AND producto_id = v_producto.id;
+    ELSE
+      INSERT INTO public.detalles_pedido(pedido_id, producto_id, cantidad, precio_unitario, nombre_producto)
+      VALUES (p_pedido_id, v_producto.id, v_cantidad, v_producto.precio, v_producto.nombre);
+    END IF;
+  END LOOP;
+
+  IF p_observaciones IS NOT NULL THEN
+    UPDATE public.pedidos SET observaciones = btrim(p_observaciones) WHERE id = p_pedido_id;
+  END IF;
+
+  RETURN p_pedido_id;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.agregar_items_pedido_mesera(uuid, jsonb, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.agregar_items_pedido_mesera(uuid, jsonb, text) TO authenticated;
