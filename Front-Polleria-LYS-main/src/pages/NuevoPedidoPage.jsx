@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -17,6 +17,7 @@ import {
   Grid2X2,
 } from 'lucide-react';
 import { PRODUCTS } from '../data/products';
+import { getProducts } from '../services/productService';
 import mesaService from '../services/mesaService';
 import authService from '../services/authService';
 import '../styles/nuevoPedido.css';
@@ -31,40 +32,39 @@ const CATEGORIAS_MENU = [
 
 function NuevoPedidoForm({ numeroNormalizado }) {
   const navigate = useNavigate();
-  const todasLasMesas = useMemo(() => mesaService.getMesas(), []);
-  const mesaActual = useMemo(() => {
-    return todasLasMesas.find((m) => String(m.numero).padStart(2, '0') === numeroNormalizado) || null;
-  }, [todasLasMesas, numeroNormalizado]);
-
-  const [comensales, setComensales] = useState(() => mesaActual?.comensalesReserva || mesaActual?.capacidad || 4);
+  const [mesaActual, setMesaActual] = useState(null);
+  const [comensales, setComensales] = useState(4);
   const [categoriaActiva, setCategoriaActiva] = useState('pollos');
   const [busqueda, setBusqueda] = useState('');
   const [toastMsg, setToastMsg] = useState('');
+  const [catalogoProductos, setCatalogoProductos] = useState(PRODUCTS);
+  const [itemsComanda, setItemsComanda] = useState([]);
+  const [observaciones, setObservaciones] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
-  // Carga los productos de esta mesa si ya tiene una orden activa
-  const [itemsComanda, setItemsComanda] = useState(() => {
-    if (!mesaActual?.pedidoId) return [];
-    try {
-      const raw = localStorage.getItem('lys_pedidos');
-      const pedidos = raw ? JSON.parse(raw) : [];
-      const pedidoExistente = pedidos.find((p) => p.id === mesaActual.pedidoId);
-      return pedidoExistente?.items || [];
-    } catch {
-      return [];
-    }
-  });
+  useEffect(() => {
+    let activo = true;
+    mesaService.getMesaByNumero(numeroNormalizado).then((mesa) => {
+      if (!activo) return;
+      if (mesa) {
+        setMesaActual(mesa);
+        setComensales(mesa.comensales || mesa.capacidad || 4);
+        if (mesa.items && mesa.items.length > 0) {
+          setItemsComanda(mesa.items.map((it) => ({
+            id: it.id,
+            nombre: it.nombre,
+            precio: it.precio,
+            cantidad: it.cantidad,
+          })));
+        }
+        if (mesa.observaciones) {
+          setObservaciones(mesa.observaciones);
+        }
+      }
+    }).catch(console.error);
 
-  const [observaciones, setObservaciones] = useState(() => {
-    if (!mesaActual?.pedidoId) return '';
-    try {
-      const raw = localStorage.getItem('lys_pedidos');
-      const pedidos = raw ? JSON.parse(raw) : [];
-      const pedidoExistente = pedidos.find((p) => p.id === mesaActual.pedidoId);
-      return pedidoExistente?.observaciones || '';
-    } catch {
-      return '';
-    }
-  });
+    return () => { activo = false; };
+  }, [numeroNormalizado]);
 
   // Verificar si hay un borrador previo guardado para esta mesa
   const [borradorPendiente, setBorradorPendiente] = useState(() => {
