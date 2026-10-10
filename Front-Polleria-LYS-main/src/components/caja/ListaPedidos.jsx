@@ -1,7 +1,7 @@
 import { ChevronRight, ReceiptText } from "lucide-react";
 import cajaService from "../../services/cajaService";
 
-export default function ListaPedidos({ pedidos, pedidoSeleccionado, onSeleccionar }) {
+export default function ListaPedidos({ pedidos, pedidoSeleccionado, onSeleccionar, disabled = false }) {
   if (pedidos.length === 0) {
     return (
       <div className="caja-empty-state">
@@ -23,14 +23,15 @@ export default function ListaPedidos({ pedidos, pedidoSeleccionado, onSelecciona
           <button
             type="button"
             key={pedido.id}
+            disabled={disabled}
             className={`caja-item ${seleccionado ? "caja-item-selected" : ""}`}
             onClick={() => onSeleccionar(pedido.id)}
             aria-pressed={seleccionado}
           >
-            <span className="caja-table-icon" aria-hidden="true">{pedido.mesa}</span>
+            <span className="caja-table-icon" aria-hidden="true">{pedido.mesa || "—"}</span>
             <span className="caja-item-meta">
               <strong>{pedido.cliente}</strong>
-              <small>{pedido.id} · {cantidad} {cantidad === 1 ? "producto" : "productos"}</small>
+              <small>{(pedido.codigo || pedido.id)} · {cantidad} {cantidad === 1 ? "producto" : "productos"}{pedido.cuentaSolicitada ? " · Cuenta solicitada" : ""}</small>
             </span>
             <span className="caja-item-amount">S/ {total.toFixed(2)}</span>
             <span className={`caja-status ${pedido.estado}`}>
