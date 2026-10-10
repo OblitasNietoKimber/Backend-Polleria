@@ -2,11 +2,12 @@ import { Banknote, CreditCard, Smartphone } from "lucide-react";
 
 const METODOS = [
   { nombre: "Efectivo", Icono: Banknote },
-  { nombre: "Yape/Plin", Icono: Smartphone },
+  { nombre: "Yape", Icono: Smartphone },
+  { nombre: "Plin", Icono: Smartphone },
   { nombre: "Tarjeta", Icono: CreditCard },
 ];
 
-export default function FormularioPago({ metodo, onMetodoChange, monto, onMontoChange, total }) {
+export default function FormularioPago({ metodo, onMetodoChange, monto, onMontoChange, total, disabled = false }) {
   const base = Math.ceil(total / 10) * 10;
   const montosRapidos = [...new Set([base, Math.max(100, base), Math.max(200, base)])];
 
@@ -18,6 +19,7 @@ export default function FormularioPago({ metodo, onMetodoChange, monto, onMontoC
           <button
             type="button"
             key={nombre}
+            disabled={disabled}
             className={metodo === nombre ? "active" : ""}
             onClick={() => onMetodoChange(nombre)}
             aria-pressed={metodo === nombre}
@@ -35,10 +37,11 @@ export default function FormularioPago({ metodo, onMetodoChange, monto, onMontoC
             <span>S/</span>
             <input
               id="monto-recibido"
+              disabled={disabled}
               type="number"
               min="0"
               max="10000"
-              step="0.10"
+              step="0.01"
               placeholder="0.00"
               value={monto}
               onChange={(e) => {
@@ -50,11 +53,11 @@ export default function FormularioPago({ metodo, onMetodoChange, monto, onMontoC
           <div className="caja-quick-amounts" aria-label="Montos rápidos">
             <span>Montos rápidos</span>
             {montosRapidos.map((valor) => (
-              <button type="button" key={valor} onClick={() => onMontoChange(String(valor))}>
+              <button type="button" key={valor} disabled={disabled} onClick={() => onMontoChange(String(valor))}>
                 S/ {valor}
               </button>
             ))}
-            <button type="button" onClick={() => onMontoChange(total.toFixed(2))}>Exacto</button>
+            <button type="button" disabled={disabled} onClick={() => onMontoChange(total.toFixed(2))}>Exacto</button>
           </div>
         </>
       ) : (
