@@ -153,7 +153,7 @@ export default function MesasPage() {
       {/* Modal de detalle de mesa */}
       {mesaSeleccionada && (
         <MesaDetalleModal
-          mesa={mesaSeleccionada}
+          mesa={mesas.find(mesa => mesa.id === mesaSeleccionada.id) || mesaSeleccionada}
           onClose={() => setMesaSeleccionada(null)}
           onMesaUpdated={recargar}
         />
