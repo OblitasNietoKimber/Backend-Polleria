@@ -43,9 +43,9 @@ export default function HistorialVentas({ ventas = [] }) {
 
               return (
               <tr key={venta.id}>
-                <td className="font-mono admin-strong-cell">{venta.id}</td>
+                <td className="font-mono admin-strong-cell">{venta.codigo}</td>
                 <td className="admin-strong-cell">{venta.cliente}</td>
-                <td className="admin-muted-cell">Mesa {venta.mesa}</td>
+                <td className="admin-muted-cell">{venta.mesa ? `Mesa ${venta.mesa}` : venta.tipo}</td>
                 <td className="font-mono admin-strong-cell">{formatoSoles.format(venta.total)}</td>
                 <td>
                   <div className="admin-method-cell">
