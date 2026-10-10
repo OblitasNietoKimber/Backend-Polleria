@@ -158,8 +158,11 @@ test('Seguridad RLS: Un cliente no puede abrir pedidos de salón ni cambiar mesa
   expect(updateAttempt.rows).toEqual([]);
 });
 
-test('Liberar mesa: La mesa vuelve a estado libre y concluye su pedido activo', async () => {
-  await asUser(mesera, 'SELECT liberar_mesa(1)');
+test('Liberar mesa: exige el cobro de caja antes de concluir la atención', async () => {
+  await expect(asUser(mesera, 'SELECT liberar_mesa(1)')).rejects.toThrow(/pago/);
+  const id = (await db.query("SELECT id FROM pedidos WHERE codigo = 'PED-01-1001'")).rows[0].id;
+  await db.query("UPDATE perfiles SET rol='caja' WHERE id=$1", [admin]);
+  await asUser(admin, "SELECT registrar_cobro($1,'efectivo',120,'00000000-0000-0000-0000-000000000090',110.7)", [id]);
 
   const mesa = (await asUser(mesera, 'SELECT estado FROM mesas WHERE id = 1')).rows[0];
   expect(mesa.estado).toBe('libre');
