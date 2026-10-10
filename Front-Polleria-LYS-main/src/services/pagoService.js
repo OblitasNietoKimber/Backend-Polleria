@@ -59,4 +59,13 @@ export async function getPedidoPorId(id) {
   return row ? normalizarPedido(row) : null;
 }
 export function calcularTotal(pedido) { return Number(pedido.total); }
-export default { getPedidos, getPedidosPendientes, getPedidoPorId, getVentas, calcularTotal };
+export async function registrarCobro(id, { metodo, monto, idempotencia, totalEsperado, referencia = null }) {
+  const metodoId = Object.keys(METODOS).find(key => METODOS[key] === metodo) || metodo;
+  const recibo = unwrap(await database().rpc('registrar_cobro', {
+    p_pedido_id: id, p_metodo: metodoId, p_recibido: Number(monto),
+    p_idempotencia: idempotencia, p_total_esperado: Number(totalEsperado), p_referencia: referencia,
+  }));
+  if (!recibo?.pago || !recibo.items) throw new Error('El servidor no devolvió un comprobante válido. Reintenta el mismo cobro.');
+  return normalizarComprobante(recibo);
+}
+export default { getPedidos, getPedidosPendientes, getPedidoPorId, getVentas, calcularTotal, registrarCobro };

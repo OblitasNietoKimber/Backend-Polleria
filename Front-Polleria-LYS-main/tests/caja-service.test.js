@@ -24,7 +24,26 @@ test('recorre páginas completas para no omitir pedidos', async () => {
   expect(await pagos.getPedidos()).toHaveLength(101);
   expect(query.range).toHaveBeenLastCalledWith(100, 199);
 });
+test('envía una sola RPC sin confiar en total o vuelto propuestos por el navegador', async () => {
+  const result = await pagos.registrarCobro('uuid', { metodo: 'Efectivo', monto: 50, idempotencia: 'clave', totalEsperado: 42.9, vuelto: 999 });
+  expect(rpc).toHaveBeenCalledWith('registrar_cobro', { p_pedido_id: 'uuid', p_metodo: 'efectivo', p_recibido: 50, p_idempotencia: 'clave', p_total_esperado: 42.9, p_referencia: null });
+  expect(result.pago).toMatchObject({ metodo: 'Efectivo', monto: 50, vuelto: 7.1 });
+});
 test('muestra el comprobante guardado sin recalcularlo con productos nuevos', async () => {
   query.maybeSingle.mockResolvedValue({ data: { ...row, total: '99', pagos: [{ comprobante: recibo }] }, error: null });
   expect((await pagos.getPedidoPorId('uuid')).total).toBe(42.9);
+});
+test('propaga errores y exige un comprobante del servidor antes de confirmar', async () => {
+  rpc.mockResolvedValue({ error: { message: 'El total cambió' } });
+  await expect(pagos.registrarCobro('uuid', {})).rejects.toThrow('El total cambió');
+  rpc.mockResolvedValue({ data: null, error: null });
+  await expect(pagos.registrarCobro('uuid', {})).rejects.toThrow('comprobante válido');
+  query.then = resolve => resolve({ error: { message: 'Sin conexión' } });
+  await expect(pagos.getPedidos()).rejects.toThrow('Sin conexión');
+});
+test('un rol ajeno a caja no consulta ni registra cobros', async () => {
+  user.mockReturnValue({ rol: 'mesera' });
+  await expect(pagos.getPedidos()).rejects.toThrow('caja');
+  await expect(pagos.registrarCobro('uuid', {})).rejects.toThrow('caja');
+  expect(rpc).not.toHaveBeenCalled();
 });
