@@ -1,8 +1,15 @@
 import { test, expect } from '@playwright/test'
 const identity = { id:'00000000-0000-0000-0000-000000000001', email:'cliente@example.test',emailVerified:true,profile:{name:'Cliente'} }
 const form={name:'Cliente Prueba',phone:'987654321',address:'Av. Prueba 123',reference:''}
-async function backend(page,{type='delivery',failFirst=false,foreign=false}={}) {
-  let saved=null; const confirmations=[]
+async function backend(page,{type='delivery',failFirst=false,foreign=false,initialOrder=false}={}) {
+  let saved=initialOrder ? {
+    id:'00000000-0000-0000-0000-000000000099',
+    codigo:'LS-1e71413b-1343-4300-bb1b-8c9112178ec9',tipo:type,
+    entrega:form,subtotal:'128.70',envio:'6.00',total:'134.70',
+    estado_id:'recibido',creado_en:'2026-10-10T06:16:00Z',
+    detalles_pedido:[{producto_id:1,cantidad:3,precio_unitario:'42.90',
+      nombre_producto:'Pollo a la Brasa con papas, ensalada y todas las cremas de la casa'}],
+  } : null; const confirmations=[]
   await page.addInitScript(({type,form}) => {
     localStorage.setItem('lys-cart',JSON.stringify({1:1}))
     localStorage.setItem('lys-checkout-delivery',JSON.stringify({deliveryType:type,form}))
@@ -67,3 +74,41 @@ test('no muestra detalles cuando el backend no devuelve un pedido ajeno',async({
   await expect(page.getByText('No encontramos ese pedido.')).toBeVisible()
   await expect(page.getByRole('region',{name:'Historial de estados'})).toHaveCount(0)
 })
+
+for (const width of [320, 390, 768, 876, 1280]) {
+  test(`tarjeta de pedido legible sin superposiciones a ${width}px`, async ({ page }) => {
+    await backend(page, { initialOrder: true })
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/pedidos')
+    const card = page.locator('.order-card')
+    await expect(card).toBeVisible()
+    await expect(card.locator('.order-card-product-name')).toContainText('Pollo a la Brasa')
+    await expect(card.locator('.order-card-total')).toHaveText('S/ 134.70')
+    // Medir tras la animación de entrada y la carga de las fuentes.
+    await card.evaluate(async element => {
+      await document.fonts.ready
+      await Promise.all(element.getAnimations().map(animation => animation.finished))
+    })
+    const layout = await card.evaluate(element => {
+      const bounds = element.getBoundingClientRect()
+      const selectors = ['.order-card-icon', '.order-card-info', '.order-card-product',
+        '.order-card-status-col', '.order-card-cta']
+      const boxes = selectors.map(selector => element.querySelector(selector).getBoundingClientRect())
+      const contained = boxes.every(box => box.left >= bounds.left && box.right <= bounds.right
+        && box.top >= bounds.top && box.bottom <= bounds.bottom)
+      const overlaps = boxes.some((a, i) => boxes.slice(i + 1).some(b =>
+        Math.min(a.right, b.right) > Math.max(a.left, b.left) + 1
+        && Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top) + 1))
+      const textVisible = ['.order-card-id', '.order-card-product-name', '.order-card-count-tag']
+        .every(selector => {
+          const node = element.querySelector(selector)
+          return node.clientWidth > 0 && node.scrollWidth <= node.clientWidth + 1
+        })
+      return { contained, overlaps, textVisible,
+        pageOverflow: document.documentElement.scrollWidth > window.innerWidth }
+    })
+    expect(layout).toEqual({ contained: true, overlaps: false, textVisible: true, pageOverflow: false })
+    await card.click()
+    await expect(page.getByRole('heading', { name: 'Pedido LS-1e71413b-1343-4300-bb1b-8c9112178ec9' })).toBeVisible()
+  })
+}

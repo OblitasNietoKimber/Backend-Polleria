@@ -107,9 +107,13 @@
 .order-card {
   position: relative;
   overflow: hidden;
-  display: flex;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon info status"
+    ". product cta";
   align-items: center;
-  gap: 16px;
+  gap: 12px 16px;
   width: 100%;
   padding: 16px 20px;
   background: var(--paper);
@@ -151,6 +155,7 @@
 }
 
 .order-card-icon {
+  grid-area: icon;
   flex-shrink: 0;
   width: 42px;
   height: 42px;
@@ -163,11 +168,11 @@
 }
 
 .order-card-info {
-  flex-shrink: 0;
+  grid-area: info;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 110px;
+  min-width: 0;
 }
 
 .order-card-id { font-weight: 700; font-size: 0.9rem; color: var(--rust); }
@@ -180,14 +185,10 @@
   color: var(--smoke);
 }
 
-.order-card-divider {
-  width: 1px;
-  align-self: stretch;
-  background: var(--line);
-  flex-shrink: 0;
-}
+.order-card-divider { display: none; }
 
 .order-card-product {
+  grid-area: product;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -205,6 +206,7 @@
 }
 
 .order-card-product-text {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -215,22 +217,20 @@
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .order-card-product-extra {
   font-size: 0.75rem;
   color: var(--smoke);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .order-card-count-tag {
   display: inline-block;
   width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
   font-size: 0.68rem;
   font-weight: 600;
   color: var(--smoke);
@@ -241,6 +241,7 @@
 }
 
 .order-card-status-col {
+  grid-area: status;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -253,6 +254,8 @@
 .order-card-total { font-weight: 700; font-size: 1rem; color: var(--ink); }
 
 .order-card-cta {
+  grid-area: cta;
+  justify-self: end;
   flex-shrink: 0;
   font-size: 0.82rem;
   font-weight: 700;
@@ -261,9 +264,14 @@
 }
 
 @media (max-width: 720px) {
-  .order-card { flex-wrap: wrap; }
-  .order-card-divider { display: none; }
-  .order-card-product { order: 3; width: 100%; }
+  .order-card {
+    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-areas:
+      "icon info"
+      "product product"
+      "status status"
+      "cta cta";
+  }
   .order-card-status-col { align-items: flex-start; }
 }
 
