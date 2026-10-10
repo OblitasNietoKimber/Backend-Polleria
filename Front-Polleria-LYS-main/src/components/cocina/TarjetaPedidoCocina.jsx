@@ -10,7 +10,7 @@ const ESTADO_CLASE = {
 const TIPO_LABEL = {
   salon: "Salón",
   delivery: "Delivery",
-  pickup: "Para llevar",
+  recojo: "Para llevar",
 };
 
 export default function TarjetaPedidoCocina({ pedido, onCambiarEstado, actualizando = false }) {

@@ -4,7 +4,7 @@ const FILTROS = [
   { id: "todos", label: "Todos", icono: LayoutGrid },
   { id: "salon", label: "Salón", icono: UtensilsCrossed },
   { id: "delivery", label: "Delivery", icono: Bike },
-  { id: "pickup", label: "Para llevar", icono: ShoppingBag },
+  { id: "recojo", label: "Para llevar", icono: ShoppingBag },
 ];
 
 export default function FiltrosTipoPedido({ filtroActivo, onCambiarFiltro }) {

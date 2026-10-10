@@ -49,6 +49,11 @@ test('rechazo de concurrencia deja el pedido visible y muestra el error',async({
  const backend=fixture();backend.reject();await backend.install(page);await page.goto('/cocina');
  await page.getByRole('button',{name:'Comenzar'}).click();await expect(page.getByRole('alert')).toContainText('Otro usuario');await expect(page.getByRole('button',{name:'Comenzar'})).toBeEnabled();
 });
+test('filtra recojo y mantiene delivery listo para reparto sin entregar desde cocina',async({page})=>{
+ const backend=fixture();backend.row.estado_id='listo';backend.row.tipo='delivery';await backend.install(page);await page.goto('/cocina');
+ await expect(page.getByText('Listo para reparto')).toBeVisible();await expect(page.getByRole('button',{name:'Entregar',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Para llevar',exact:true}).click();await expect(page.getByText('Pollo vendido')).toHaveCount(0);
+});
 test('recupera cambios por consulta automática cuando WebSocket no está disponible',async({page})=>{
  const backend=fixture();await backend.install(page);await page.routeWebSocket('**/socket.io/**',ws=>ws.close());await page.goto('/cocina');
  await expect(page.getByRole('button',{name:'Comenzar'})).toBeVisible();backend.row.estado_id='preparacion';await expect(page.getByRole('button',{name:'Marcar listo'})).toBeVisible({timeout:8000});
