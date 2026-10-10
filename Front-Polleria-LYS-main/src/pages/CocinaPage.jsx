@@ -9,7 +9,7 @@ import CocinaNavLateral from "../components/cocina/CocinaNavLateral";
 import FiltrosTipoPedido from "../components/cocina/FiltrosTipoPedido";
 
 export default function CocinaPage() {
-  const { pedidos, recargar, loading } = usePedidosCocina();
+  const { pedidos, recargar, loading, error } = usePedidosCocina();
   const [filtro, setFiltro] = useState("todos");
   const [ahora, setAhora] = useState(new Date());
 
@@ -18,9 +18,18 @@ export default function CocinaPage() {
     return () => clearInterval(intervalo);
   }, []);
 
+  const [actualizando, setActualizando] = useState(new Set());
+  const [errorCambio, setErrorCambio] = useState('');
   async function handleCambiarEstado(pedido, nuevoEstado) {
-    await cocinaService.cambiarEstado(pedido, nuevoEstado);
-    await recargar();
+    if (actualizando.has(pedido.id)) return;
+    setActualizando(previous => new Set(previous).add(pedido.id));
+    setErrorCambio('');
+    try { await cocinaService.cambiarEstado(pedido, nuevoEstado); }
+    catch (error) { setErrorCambio(error.message); }
+    finally {
+      await recargar();
+      setActualizando(previous => { const next = new Set(previous); next.delete(pedido.id); return next; });
+    }
   }
 
   const pedidosFiltrados =
@@ -53,22 +62,23 @@ export default function CocinaPage() {
           <FiltrosTipoPedido filtroActivo={filtro} onCambiarFiltro={setFiltro} />
 
           {loading && <p role="status">Cargando pedidos de cocina...</p>}
+          {(error || errorCambio) && <div role="alert" className="cocina-error"><p>{errorCambio || error}</p><button onClick={recargar}>Actualizar panel</button></div>}
           <div className="cocina-board" aria-busy={loading}>
             <ColumnaPedidos titulo="Nuevos pedidos" variante="nuevo" icono={ClipboardList} pedidos={nuevos}>
               {nuevos.map((p) => (
-                <TarjetaPedidoCocina key={p.id} pedido={p} onCambiarEstado={handleCambiarEstado} />
+                <TarjetaPedidoCocina key={p.id} pedido={p} onCambiarEstado={handleCambiarEstado} actualizando={actualizando.has(p.id)} />
               ))}
             </ColumnaPedidos>
 
             <ColumnaPedidos titulo="Preparando" variante="preparacion" icono={CookingPot} pedidos={enPreparacion}>
               {enPreparacion.map((p) => (
-                <TarjetaPedidoCocina key={p.id} pedido={p} onCambiarEstado={handleCambiarEstado} />
+                <TarjetaPedidoCocina key={p.id} pedido={p} onCambiarEstado={handleCambiarEstado} actualizando={actualizando.has(p.id)} />
               ))}
             </ColumnaPedidos>
 
             <ColumnaPedidos titulo="Listos" variante="listo" icono={BellRing} pedidos={listos}>
               {listos.map((p) => (
-                <TarjetaPedidoCocina key={p.id} pedido={p} onCambiarEstado={handleCambiarEstado} />
+                <TarjetaPedidoCocina key={p.id} pedido={p} onCambiarEstado={handleCambiarEstado} actualizando={actualizando.has(p.id)} />
               ))}
             </ColumnaPedidos>
           </div>
