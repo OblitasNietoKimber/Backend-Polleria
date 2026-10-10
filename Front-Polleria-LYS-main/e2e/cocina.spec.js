@@ -54,6 +54,10 @@ test('filtra recojo y mantiene delivery listo para reparto sin entregar desde co
  await expect(page.getByText('Listo para reparto')).toBeVisible();await expect(page.getByRole('button',{name:'Entregar',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Para llevar',exact:true}).click();await expect(page.getByText('Pollo vendido')).toHaveCount(0);
 });
+test('muestra entregados e historial del servidor en el panel móvil',async({page})=>{
+ const backend=fixture();backend.row.estado_id='entregado';await backend.install(page);await page.setViewportSize({width:390,height:844});await page.goto('/cocina/historial');
+ await expect(page.getByText('LS-cocina-prueba').first()).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
 test('recupera cambios por consulta automática cuando WebSocket no está disponible',async({page})=>{
  const backend=fixture();await backend.install(page);await page.routeWebSocket('**/socket.io/**',ws=>ws.close());await page.goto('/cocina');
  await expect(page.getByRole('button',{name:'Comenzar'})).toBeVisible();backend.row.estado_id='preparacion';await expect(page.getByRole('button',{name:'Marcar listo'})).toBeVisible({timeout:8000});

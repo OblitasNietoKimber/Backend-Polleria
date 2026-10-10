@@ -29,6 +29,9 @@ test('conserva el rechazo del servidor para recuperar el pedido actualizado',asy
  rpc.mockResolvedValue({data:null,error:{message:'Otro usuario cambió este pedido.'}});
  await expect(cocina.cambiarEstado({databaseId:'db-id',estadoCocina:'nuevo'},'en_preparacion')).rejects.toThrow(/Otro usuario/);
 });
+test('el historial es paginado y muestra solo los pedidos entregados',async()=>{
+ await cocina.getPedidosFinalizados({page:2}); expect(query.eq).toHaveBeenCalledWith('estado_id','entregado'); expect(query.range).toHaveBeenCalledWith(100,149);
+});
 test('cliente y mesera no consultan el panel de cocina',async()=>{
  user.mockReturnValue({rol:'cliente'}); await expect(cocina.getPedidosActivos()).rejects.toThrow(/cocina/); expect(from).not.toHaveBeenCalled();
 });

@@ -36,9 +36,9 @@ async function getPedidosActivos() {
     if (rows.length < 100) return result;
   }
 }
-async function getPedidosFinalizados() {
+async function getPedidosFinalizados({ page = 0 } = {}) {
   const rows = unwrap(await database().from('pedidos').select(columns).eq('estado_id','entregado')
-    .order('creado_en',{ascending:false}).order('id',{ascending:false}).range(0,49)) || [];
+    .order('creado_en',{ascending:false}).order('id',{ascending:false}).range(page*50,page*50+49)) || [];
   return rows.map(mapPedido);
 }
 async function cambiarEstado(pedido, nuevoEstado) {
