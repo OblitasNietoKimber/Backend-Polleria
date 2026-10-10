@@ -64,6 +64,7 @@ export async function getMesas() {
       comensales: pedido?.comensales || m.capacidad,
       observaciones: pedido?.observaciones || '',
       cuentaSolicitada: Boolean(pedido?.cuenta_solicitada),
+      estadoPedido: pedido?.estado_id || null,
       totalAcumulado: Number(total.toFixed(2)),
       inicioAt: pedido?.creado_en || null,
       items: (pedido?.detalles_pedido || []).map((d) => ({

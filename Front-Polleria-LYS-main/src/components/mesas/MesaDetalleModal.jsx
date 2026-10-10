@@ -1,8 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Calendar, CheckCircle2 } from 'lucide-react';
 import mesaService from '../../services/mesaService';
-import cocinaService from '../../services/cocinaService';
 
 export default function MesaDetalleModal({ mesa, onClose, onMesaUpdated }) {
   const navigate = useNavigate();
@@ -14,11 +13,7 @@ export default function MesaDetalleModal({ mesa, onClose, onMesaUpdated }) {
   const [telefonoReserva, setTelefonoReserva] = useState('');
   const [errorReserva, setErrorReserva] = useState('');
 
-  const pedidoActivo = useMemo(() => {
-    if (!mesa?.pedidoId) return null;
-    const pedidos = cocinaService.getPedidos();
-    return pedidos.find((p) => p.id === mesa.pedidoId) || null;
-  }, [mesa]);
+  const pedidoActivo = mesa?.pedidoId ? { items: mesa.items, estadoCocina: mesa.estadoPedido } : null;
 
   if (!mesa) return null;
 
