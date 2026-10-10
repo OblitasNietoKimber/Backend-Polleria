@@ -81,6 +81,13 @@ test('no prepara pedidos vacíos y deja intactos estado e historial',async()=>{
   await expect(change(id,'recibido','preparacion')).rejects.toThrow(/sin productos/);
   expect((await db.query('SELECT id FROM historial_estados_pedido WHERE pedido_id=$1',[id])).rows).toHaveLength(1);
 });
+test('las notificaciones se producen en servidor sin filtrar datos del pedido',async()=>{
+  const id=await create('LS-notifica'); await db.exec('DELETE FROM realtime.messages'); await change(id,'recibido','preparacion');
+  const rows=(await db.query('SELECT channel_name,event_name,payload FROM realtime.messages')).rows;
+  expect(rows).toHaveLength(2);
+  expect(rows.map(r=>r.channel_name)).toEqual(['lys:staff',`lys:client:${users.cliente}`]);
+  expect(rows.every(r=>r.event_name==='lys:pedido-actualizado' && JSON.stringify(r.payload)===JSON.stringify({pedidoId:id}))).toBe(true);
+});
 test('RLS limita suscripciones privadas y prohíbe falsificar eventos',async()=>{
   await db.query("SELECT set_config('test.channel',$1,false)",[`lys:client:${users.cliente}`]);
   expect((await asUser(users.cliente,'SELECT pattern FROM realtime.channels')).rows).toEqual([{pattern:'lys:client:%'}]);
