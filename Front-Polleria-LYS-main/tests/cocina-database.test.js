@@ -11,7 +11,7 @@ async function asUser(id, sql, params = []) {
 async function create(code, type = 'recojo') {
   return (await asUser(users.cliente,'SELECT crear_pedido_cliente($1,$2,$3,$4,$5) AS id', [code,type,JSON.stringify({name:'Prueba',phone:'987654321',address:'Av. Prueba 123'}),JSON.stringify([{producto_id:1,cantidad:2}]),'efectivo'])).rows[0].id;
 }
-const change = (id,from,to,user=users.cocina) => asUser(user,'UPDATE pedidos SET estado_id=$3 WHERE id=$1 AND estado_id=$2 RETURNING id',[id,from,to]);
+const change = (id,from,to,user=users.cocina) => asUser(user,'SELECT cambiar_estado_cocina($1,$2,$3)',[id,from,to]);
 beforeAll(async () => {
   await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE SCHEMA auth;
     CREATE TABLE auth.users(id uuid PRIMARY KEY);
@@ -42,10 +42,34 @@ test('consulta productos vendidos, observaciones y estados con permisos de cocin
   expect((await asUser(users.cocina,'SELECT cantidad,nombre_producto FROM detalles_pedido WHERE pedido_id=$1',[id])).rows[0]).toMatchObject({cantidad:2,nombre_producto:expect.any(String)});
   expect((await asUser(users.cocina,'SELECT numero FROM mesas')).rows).toHaveLength(16);
 });
+test('avanza nuevo, preparación y listo y registra autor y fecha sin duplicaciones',async()=>{
+  const id=await create('LS-cocina-auditoria');
+  await change(id,'recibido','preparacion'); await change(id,'preparacion','listo');
+  const rows=(await asUser(users.cliente,'SELECT estado_anterior,estado_id,cambiado_por,cambiado_en FROM historial_estados_pedido WHERE pedido_id=$1 ORDER BY id',[id])).rows;
+  expect(rows.map(r=>r.estado_id)).toEqual(['recibido','preparacion','listo']);
+  expect(rows[2]).toMatchObject({estado_anterior:'preparacion',cambiado_por:users.cocina}); expect(rows[2].cambiado_en).toBeTruthy();
+  await expect(change(id,'preparacion','listo')).rejects.toThrow(/Otro usuario/);
+  expect((await db.query('SELECT id FROM historial_estados_pedido WHERE pedido_id=$1',[id])).rows).toHaveLength(3);
+});
 test.each([['recibido','listo'],['recibido','entregado'],['recibido',null],['recibido','inventado']])('rechaza salto %s a %s',async(from,to)=>{
   const id=await create(`LS-invalid-${to || 'null'}`);
   await expect(change(id,from,to)).rejects.toThrow(/no permitida/);
   expect((await db.query('SELECT estado_id FROM pedidos WHERE id=$1',[id])).rows[0].estado_id).toBe('recibido');
+});
+test('dos pantallas con el mismo estado no aplican dos cambios ni dos auditorías',async()=>{
+  const id=await create('LS-pantallas');
+  // El bloqueo de fila y la comparación se vuelven a evaluar en cada transacción.
+  await change(id,'recibido','preparacion');
+  await expect(change(id,'recibido','preparacion')).rejects.toThrow(/Otro usuario/);
+  await expect(change(id,'preparacion','recibido')).rejects.toThrow(/no permitida/);
+});
+test.each(['cliente','otro','mesera','caja'])('%s no usa la RPC de cocina',async role=>{
+  const id=await create(`LS-role-${role}`); await expect(change(id,'recibido','preparacion',users[role])).rejects.toThrow(/Solo cocina/);
+});
+test('cocina no escribe estados ni observaciones directamente por API',async()=>{
+  const id=await create('LS-rls-cocina');
+  expect((await asUser(users.cocina,"UPDATE pedidos SET estado_id='listo',observaciones='alterado' WHERE id=$1 RETURNING id",[id])).rows).toEqual([]);
+  await expect(asUser(users.admin,"UPDATE pedidos SET estado_id='listo' WHERE id=$1",[id])).rejects.toThrow(/Transición/);
 });
 test('entrega recojo después de listo y mantiene delivery esperando reparto',async()=>{
   const id=await create('LS-entrega-recojo'); await change(id,'recibido','preparacion'); await change(id,'preparacion','listo'); await change(id,'listo','entregado');
@@ -56,4 +80,8 @@ test('no prepara pedidos vacíos y deja intactos estado e historial',async()=>{
   const id=(await asUser(users.mesera,"SELECT abrir_pedido_mesera(2,'PED-vacio-cocina',2,'') AS id")).rows[0].id;
   await expect(change(id,'recibido','preparacion')).rejects.toThrow(/sin productos/);
   expect((await db.query('SELECT id FROM historial_estados_pedido WHERE pedido_id=$1',[id])).rows).toHaveLength(1);
+});
+test('un usuario autenticado sin perfil no ejecuta cambios de cocina',async()=>{
+ const id=await create('LS-sin-perfil');
+ await expect(change(id,'recibido','preparacion','00000000-0000-0000-0000-000000000099')).rejects.toThrow(/Solo cocina/);
 });

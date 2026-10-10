@@ -1,6 +1,3 @@
-CREATE POLICY mesas_lectura_cocina ON public.mesas FOR SELECT TO authenticated
-USING (public.rol_actual() = 'cocina');
-
 -- Valida tanto RPC como cambios directos de la API.
 CREATE FUNCTION public.validar_transicion_pedido() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
@@ -33,3 +30,35 @@ $$;
 REVOKE ALL ON FUNCTION public.validar_transicion_pedido() FROM PUBLIC;
 CREATE TRIGGER pedido_validar_transicion BEFORE UPDATE OF estado_id ON public.pedidos
 FOR EACH ROW EXECUTE FUNCTION public.validar_transicion_pedido();
+
+CREATE FUNCTION public.cambiar_estado_cocina(p_pedido_id uuid, p_estado_actual text, p_nuevo_estado text)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE v_pedido public.pedidos%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL OR COALESCE(public.rol_actual(),'') NOT IN ('cocina','admin') THEN
+    RAISE EXCEPTION 'Solo cocina o administración pueden actualizar este panel' USING ERRCODE = '42501';
+  END IF;
+  SELECT * INTO v_pedido FROM public.pedidos WHERE id = p_pedido_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'El pedido no existe' USING ERRCODE = '22023'; END IF;
+  IF v_pedido.estado_id IS DISTINCT FROM p_estado_actual THEN
+    RAISE EXCEPTION 'Otro usuario cambió este pedido. Actualiza el panel.' USING ERRCODE = '40001';
+  END IF;
+  IF (
+    (p_estado_actual = 'recibido' AND p_nuevo_estado = 'preparacion')
+    OR (p_estado_actual = 'preparacion' AND p_nuevo_estado = 'listo')
+    OR (p_estado_actual = 'listo' AND p_nuevo_estado = 'entregado' AND v_pedido.tipo IN ('salon','recojo'))
+  ) IS NOT TRUE THEN RAISE EXCEPTION 'Transición de cocina no permitida' USING ERRCODE = '22023'; END IF;
+  UPDATE public.pedidos SET estado_id = p_nuevo_estado WHERE id = p_pedido_id;
+  RETURN p_pedido_id;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.cambiar_estado_cocina(uuid,text,text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.cambiar_estado_cocina(uuid,text,text) TO authenticated;
+CREATE POLICY mesas_lectura_cocina ON public.mesas FOR SELECT TO authenticated
+USING (public.rol_actual() = 'cocina');
+-- Cocina escribe únicamente mediante la RPC; meseras conserva sus permisos previos.
+DROP POLICY pedidos_editar ON public.pedidos;
+CREATE POLICY pedidos_editar ON public.pedidos FOR UPDATE TO authenticated
+USING (public.rol_actual() IN ('mesera','admin'))
+WITH CHECK (public.rol_actual() IN ('mesera','admin'));
+CREATE INDEX pedidos_cocina_estado_fecha_idx ON public.pedidos(estado_id,creado_en,id);
