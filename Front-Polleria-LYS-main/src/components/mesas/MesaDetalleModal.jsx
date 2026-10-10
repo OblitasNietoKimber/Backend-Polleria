@@ -49,19 +49,6 @@ export default function MesaDetalleModal({ mesa, onClose, onMesaUpdated }) {
     onClose();
   }
 
-  async function handleLiberarMesa() {
-    if (window.confirm(`¿Confirmas liberar la Mesa ${numero}?`)) {
-      try {
-        await mesaService.liberarMesa({ mesaId: mesa.id });
-        if (onMesaUpdated) onMesaUpdated();
-        onClose();
-      } catch (err) {
-        console.error('Error al liberar mesa en PostgreSQL:', err);
-        alert(err.message || 'Error al liberar la mesa.');
-      }
-    }
-  }
-
   async function handleSolicitarCuenta() {
     if (mesa.pedidoId) {
       try {
@@ -245,9 +232,7 @@ export default function MesaDetalleModal({ mesa, onClose, onMesaUpdated }) {
                 <button type="button" className="mesa-btn-secondary-warn" onClick={handleSolicitarCuenta}>
                   Solicitar cuenta para caja
                 </button>
-                <button type="button" className="mesa-btn-secondary-neutral" onClick={handleLiberarMesa}>
-                  Liberar mesa manualmente
-                </button>
+                <p>La mesa se libera al confirmar el pago en caja.</p>
               </div>
             </div>
           )}
