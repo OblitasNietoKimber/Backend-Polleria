@@ -62,3 +62,11 @@ test('recupera cambios por consulta automática cuando WebSocket no está dispon
  const backend=fixture();await backend.install(page);await page.routeWebSocket('**/socket.io/**',ws=>ws.close());await page.goto('/cocina');
  await expect(page.getByRole('button',{name:'Comenzar'})).toBeVisible();backend.row.estado_id='preparacion';await expect(page.getByRole('button',{name:'Marcar listo'})).toBeVisible({timeout:8000});
 });
+
+test('actualiza la lista del cliente al recibir un cambio desde cocina',async({page})=>{
+ const backend=fixture();await backend.install(page,'cliente');await page.goto('/pedidos');
+ await expect(page.locator('.status-badge')).toHaveText('Recibido');
+ await expect.poll(()=>backend.sockets.size).toBeGreaterThanOrEqual(1);
+ backend.row.estado_id='listo';backend.publish();
+ await expect(page.locator('.status-badge')).toHaveText('Listo',{timeout:4000});
+});

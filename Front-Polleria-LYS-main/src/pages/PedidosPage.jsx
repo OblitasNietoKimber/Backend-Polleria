@@ -1,29 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { PackageSearch } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import orderService, { ORDER_PAGE_SIZE } from '../services/orderService'
+import useOrderResource from '../hooks/useOrderResource'
 import OrderHistoryList from '../components/orders/OrderHistoryList'
 import '../styles/pedidos.css'
 
 export default function PedidosPage() {
-  const [orders, setOrders] = useState([])
   const [page, setPage] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    let active = true
-    orderService.getOrders({ page }).then(rows => { if (active) setOrders(rows) })
-      .catch(error => { if (active) setError(error.message) })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [page])
-
-  function changePage(nextPage) {
-    setLoading(true)
-    setError('')
-    setPage(nextPage)
-  }
+  const load = useCallback(() => orderService.getOrders({ page }), [page])
+  const { data, loading, error } = useOrderResource(load)
+  const orders = data || []
+  function changePage(nextPage) { setPage(nextPage) }
 
   return (
     <section className="orders-page">
