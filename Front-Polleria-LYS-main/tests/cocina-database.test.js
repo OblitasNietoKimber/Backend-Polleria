@@ -81,6 +81,17 @@ test('no prepara pedidos vacíos y deja intactos estado e historial',async()=>{
   await expect(change(id,'recibido','preparacion')).rejects.toThrow(/sin productos/);
   expect((await db.query('SELECT id FROM historial_estados_pedido WHERE pedido_id=$1',[id])).rows).toHaveLength(1);
 });
+test('RLS limita suscripciones privadas y prohíbe falsificar eventos',async()=>{
+  await db.query("SELECT set_config('test.channel',$1,false)",[`lys:client:${users.cliente}`]);
+  expect((await asUser(users.cliente,'SELECT pattern FROM realtime.channels')).rows).toEqual([{pattern:'lys:client:%'}]);
+  expect((await asUser(users.otro,'SELECT pattern FROM realtime.channels')).rows).toEqual([]);
+  expect((await asUser(users.cocina,'SELECT pattern FROM realtime.channels')).rows).toEqual([{pattern:'lys:staff'}]);
+  await expect(asUser(users.cliente,"INSERT INTO realtime.messages VALUES ('lys:staff','lys:pedido-actualizado','{}')")).rejects.toThrow(/row-level security/);
+  await db.exec('SET ROLE anon');
+  try { expect((await db.query('SELECT pattern FROM realtime.channels')).rows).toEqual([]); }
+  finally { await db.exec('RESET ROLE'); }
+});
+
 test('un usuario autenticado sin perfil no ejecuta cambios de cocina',async()=>{
  const id=await create('LS-sin-perfil');
  await expect(change(id,'recibido','preparacion','00000000-0000-0000-0000-000000000099')).rejects.toThrow(/Solo cocina/);
