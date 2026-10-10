@@ -20,7 +20,7 @@ export default function DetalleVenta({ pedido }) {
         <div>
           <span className="caja-eyebrow">Detalle del pedido</span>
           <h2>{pedido.cliente}</h2>
-          <p>{(pedido.codigo || pedido.id)}</p>
+          <p>{pedido.codigo}</p>
         </div>
         <span className={`caja-detail-status ${pedido.estado}`}>
           {pedido.estado === "pagado" ? <CheckCircle2 size={16} /> : null}

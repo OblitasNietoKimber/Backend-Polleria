@@ -31,7 +31,7 @@ export default function ListaPedidos({ pedidos, pedidoSeleccionado, onSelecciona
             <span className="caja-table-icon" aria-hidden="true">{pedido.mesa || "—"}</span>
             <span className="caja-item-meta">
               <strong>{pedido.cliente}</strong>
-              <small>{(pedido.codigo || pedido.id)} · {cantidad} {cantidad === 1 ? "producto" : "productos"}{pedido.cuentaSolicitada ? " · Cuenta solicitada" : ""}</small>
+              <small>{pedido.codigo} · {cantidad} {cantidad === 1 ? "producto" : "productos"}{pedido.cuentaSolicitada ? " · Cuenta solicitada" : ""}</small>
             </span>
             <span className="caja-item-amount">S/ {total.toFixed(2)}</span>
             <span className={`caja-status ${pedido.estado}`}>
