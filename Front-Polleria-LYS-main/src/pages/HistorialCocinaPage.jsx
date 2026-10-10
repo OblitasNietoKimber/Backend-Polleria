@@ -1,4 +1,5 @@
 import "../styles/cocina.css";
+import useOrderResource from '../hooks/useOrderResource';
 import cocinaService from "../services/cocinaService";
 import CocinaNavLateral from "../components/cocina/CocinaNavLateral";
 import PedidosFinalizados from "../components/cocina/PedidosFinalizados";
@@ -17,7 +18,8 @@ function dentroDeDias(fechaISO, dias) {
 }
 
 export default function HistorialCocinaPage() {
-  const finalizados = cocinaService.getPedidosFinalizados();
+  const { data, loading, error, recargar } = useOrderResource(cocinaService.getPedidosFinalizados);
+  const finalizados = data || [];
   const deHoy = finalizados.filter((p) => esHoy(p.finalizadoAt));
   const ultimos30 = finalizados.filter(
     (p) => !esHoy(p.finalizadoAt) && dentroDeDias(p.finalizadoAt, 30)
@@ -33,6 +35,8 @@ export default function HistorialCocinaPage() {
             <h1 className="font-display cocina-page-title">Historial de pedidos</h1>
           </div>
 
+          {loading && <p role="status">Cargando historial...</p>}
+          {error && <div role="alert"><p>{error}</p><button onClick={recargar}>Reintentar</button></div>}
           <section className="cocina-history-section">
             <h2 className="cocina-seccion-titulo">Hoy ({deHoy.length})</h2>
             <PedidosFinalizados pedidos={deHoy} />

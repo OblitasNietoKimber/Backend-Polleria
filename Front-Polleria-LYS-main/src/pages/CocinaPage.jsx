@@ -9,7 +9,7 @@ import CocinaNavLateral from "../components/cocina/CocinaNavLateral";
 import FiltrosTipoPedido from "../components/cocina/FiltrosTipoPedido";
 
 export default function CocinaPage() {
-  const { pedidos, recargar } = usePedidosCocina();
+  const { pedidos, recargar, loading } = usePedidosCocina();
   const [filtro, setFiltro] = useState("todos");
   const [ahora, setAhora] = useState(new Date());
 
@@ -18,9 +18,9 @@ export default function CocinaPage() {
     return () => clearInterval(intervalo);
   }, []);
 
-  function handleCambiarEstado(id, nuevoEstado) {
-    cocinaService.cambiarEstado(id, nuevoEstado);
-    recargar();
+  async function handleCambiarEstado(pedido, nuevoEstado) {
+    await cocinaService.cambiarEstado(pedido, nuevoEstado);
+    await recargar();
   }
 
   const pedidosFiltrados =
@@ -52,7 +52,8 @@ export default function CocinaPage() {
 
           <FiltrosTipoPedido filtroActivo={filtro} onCambiarFiltro={setFiltro} />
 
-          <div className="cocina-board">
+          {loading && <p role="status">Cargando pedidos de cocina...</p>}
+          <div className="cocina-board" aria-busy={loading}>
             <ColumnaPedidos titulo="Nuevos pedidos" variante="nuevo" icono={ClipboardList} pedidos={nuevos}>
               {nuevos.map((p) => (
                 <TarjetaPedidoCocina key={p.id} pedido={p} onCambiarEstado={handleCambiarEstado} />

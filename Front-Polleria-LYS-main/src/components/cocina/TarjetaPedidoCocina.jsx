@@ -47,18 +47,20 @@ export default function TarjetaPedidoCocina({ pedido, onCambiarEstado }) {
         ))}
       </ul>
 
+      {pedido.cambiadoEn && <p className="cocina-auditoria">Último cambio: {new Date(pedido.cambiadoEn).toLocaleString('es-PE')} · Usuario: {pedido.cambiadoPor || 'Sin registro'}</p>}
+      {pedido.estadoCocina === "listo" && pedido.tipo === "delivery" && <p className="cocina-auditoria">Listo para reparto</p>}
       {pedido.estadoCocina === "nuevo" && (
-        <button className="cocina-btn cocina-btn--iniciar" onClick={() => onCambiarEstado(pedido.id, "en_preparacion")}>
+        <button className="cocina-btn cocina-btn--iniciar" onClick={() => onCambiarEstado(pedido, "en_preparacion")}>
           <Play size={14} /> Comenzar
         </button>
       )}
       {pedido.estadoCocina === "en_preparacion" && (
-        <button className="cocina-btn cocina-btn--listo" onClick={() => onCambiarEstado(pedido.id, "listo")}>
+        <button className="cocina-btn cocina-btn--listo" onClick={() => onCambiarEstado(pedido, "listo")}>
           <ChefHat size={14} /> Marcar listo
         </button>
       )}
-      {pedido.estadoCocina === "listo" && (
-        <button className="cocina-btn cocina-btn--entregar" onClick={() => onCambiarEstado(pedido.id, "entregado")}>
+      {pedido.estadoCocina === "listo" && pedido.tipo !== "delivery" && (
+        <button className="cocina-btn cocina-btn--entregar" onClick={() => onCambiarEstado(pedido, "entregado")}>
           <CheckCircle2 size={14} /> Entregar
         </button>
       )}

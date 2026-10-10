@@ -396,3 +396,4 @@
   .cocina-board { flex-direction: column; }
   .cocina-column { min-width: 100%; }
 }
+.cocina-auditoria { font-size: .72rem; color: var(--smoke); overflow-wrap: anywhere; }
