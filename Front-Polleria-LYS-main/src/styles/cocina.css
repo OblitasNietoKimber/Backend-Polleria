@@ -396,3 +396,7 @@
   .cocina-board { flex-direction: column; }
   .cocina-column { min-width: 100%; }
 }
+.cocina-btn:disabled { opacity: .6; cursor: wait; }
+.cocina-auditoria { font-size: .72rem; color: var(--smoke); overflow-wrap: anywhere; }
+.cocina-error { padding: 12px; border: 1px solid var(--rust); border-radius: 8px; margin-bottom: 16px; }
+.cocina-paginacion { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
