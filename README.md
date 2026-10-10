@@ -48,3 +48,6 @@ Ver [la revisión completa](docs/revision-login-auth.md) para el estado de valid
 El catálogo conectado a PostgreSQL y sus trece commits se describen en [la revisión del catálogo](docs/catalogo-productos.md), con servicios de creación y edición, permisos y pruebas locales.
 
 Los pedidos online del cliente, sus importes de servidor, permisos e historial se describen en [la revisión de pedidos](docs/pedidos-cliente.md). Las nuevas migraciones están en `migrations/` y se aplican con la CLI de InsForge sobre el backend seleccionado.
+## Cocina y seguimiento
+
+El panel consulta pedidos y productos desde PostgreSQL, valida cambios de estado en el servidor y sincroniza cocina, mesas y seguimiento del cliente mediante canales privados de InsForge. La configuración, migraciones aplicadas y resultados de pruebas están en [la revisión de cocina](docs/panel-cocina.md).
