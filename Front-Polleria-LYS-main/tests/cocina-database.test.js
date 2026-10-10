@@ -11,6 +11,7 @@ async function asUser(id, sql, params = []) {
 async function create(code, type = 'recojo') {
   return (await asUser(users.cliente,'SELECT crear_pedido_cliente($1,$2,$3,$4,$5) AS id', [code,type,JSON.stringify({name:'Prueba',phone:'987654321',address:'Av. Prueba 123'}),JSON.stringify([{producto_id:1,cantidad:2}]),'efectivo'])).rows[0].id;
 }
+const change = (id,from,to,user=users.cocina) => asUser(user,'UPDATE pedidos SET estado_id=$3 WHERE id=$1 AND estado_id=$2 RETURNING id',[id,from,to]);
 beforeAll(async () => {
   await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE SCHEMA auth;
     CREATE TABLE auth.users(id uuid PRIMARY KEY);
@@ -40,4 +41,19 @@ test('consulta productos vendidos, observaciones y estados con permisos de cocin
   expect((await asUser(users.cocina,'SELECT estado_id,observaciones FROM pedidos WHERE id=$1',[id])).rows[0]).toEqual({estado_id:'recibido',observaciones:'Sin ají'});
   expect((await asUser(users.cocina,'SELECT cantidad,nombre_producto FROM detalles_pedido WHERE pedido_id=$1',[id])).rows[0]).toMatchObject({cantidad:2,nombre_producto:expect.any(String)});
   expect((await asUser(users.cocina,'SELECT numero FROM mesas')).rows).toHaveLength(16);
+});
+test.each([['recibido','listo'],['recibido','entregado'],['recibido',null],['recibido','inventado']])('rechaza salto %s a %s',async(from,to)=>{
+  const id=await create(`LS-invalid-${to || 'null'}`);
+  await expect(change(id,from,to)).rejects.toThrow(/no permitida/);
+  expect((await db.query('SELECT estado_id FROM pedidos WHERE id=$1',[id])).rows[0].estado_id).toBe('recibido');
+});
+test('entrega recojo después de listo y mantiene delivery esperando reparto',async()=>{
+  const id=await create('LS-entrega-recojo'); await change(id,'recibido','preparacion'); await change(id,'preparacion','listo'); await change(id,'listo','entregado');
+  const delivery=await create('LS-espera-delivery','delivery'); await change(delivery,'recibido','preparacion'); await change(delivery,'preparacion','listo');
+  await expect(change(delivery,'listo','entregado')).rejects.toThrow(/no permitida/);
+});
+test('no prepara pedidos vacíos y deja intactos estado e historial',async()=>{
+  const id=(await asUser(users.mesera,"SELECT abrir_pedido_mesera(2,'PED-vacio-cocina',2,'') AS id")).rows[0].id;
+  await expect(change(id,'recibido','preparacion')).rejects.toThrow(/sin productos/);
+  expect((await db.query('SELECT id FROM historial_estados_pedido WHERE pedido_id=$1',[id])).rows).toHaveLength(1);
 });
