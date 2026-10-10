@@ -270,6 +270,9 @@ export default function CajaPage() {
                 </button>
               </>
             )}
+            {pedidoActivo?.estado === "pagado" && pedidoActivo.pago && (
+              <button type="button" className="btn-ember" onClick={() => setVentaConfirmada(pedidoActivo)}>Ver comprobante</button>
+            )}
           </section>
         </div>
 
