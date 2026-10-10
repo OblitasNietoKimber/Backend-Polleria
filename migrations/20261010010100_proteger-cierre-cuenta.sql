@@ -43,4 +43,18 @@ $$;
 CREATE TRIGGER pedido_cobrado BEFORE UPDATE ON public.pedidos
 FOR EACH ROW EXECUTE FUNCTION public.proteger_pedido_cobrado();
 
-REVOKE ALL ON FUNCTION public.proteger_detalle_cobrado(), public.proteger_pedido_cobrado() FROM PUBLIC;
+CREATE FUNCTION public.proteger_mesa_sin_pago() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  IF NEW.estado = 'libre' AND EXISTS (
+    SELECT 1 FROM public.pedidos WHERE mesa_id = NEW.id AND tipo = 'salon'
+      AND estado_id NOT IN ('entregado','cancelado') AND estado_pago = 'pendiente'
+  ) THEN
+    RAISE EXCEPTION 'La mesa tiene un pedido pendiente de pago' USING ERRCODE = '22023';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER mesa_sin_pago BEFORE UPDATE ON public.mesas
+FOR EACH ROW EXECUTE FUNCTION public.proteger_mesa_sin_pago();
+REVOKE ALL ON FUNCTION public.proteger_detalle_cobrado(), public.proteger_pedido_cobrado(), public.proteger_mesa_sin_pago() FROM PUBLIC;
