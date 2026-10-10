@@ -37,13 +37,18 @@ function fixture() {
  }
  return {row,calls,install,publish,sockets,reject:()=>{reject=true;}};
 }
-test('cocina consulta PostgreSQL, avanza estados desde el panel',async({page})=>{
+test('cocina consulta PostgreSQL, avanza estados y actualiza el seguimiento en otro navegador',async({browser,page})=>{
  const backend=fixture();await backend.install(page);
- await page.goto('/cocina');
+ const context=await browser.newContext();const client=await context.newPage();await backend.install(client,'cliente');
+ await page.goto('/cocina');await client.goto('/pedidos/LS-cocina-prueba');
  await expect(page.getByText('Sin ají')).toBeVisible();await expect(page.getByText('Pollo vendido')).toBeVisible();await expect(page.getByText('PED-ANTIGUO')).toHaveCount(0);
+ await expect.poll(()=>backend.sockets.size).toBeGreaterThanOrEqual(2);
  await page.getByRole('button',{name:'Comenzar'}).click();await expect(page.getByRole('button',{name:'Marcar listo'})).toBeVisible();
+ await expect(client.getByRole('region',{name:'Historial de estados'})).toContainText('En preparación');
  await page.getByRole('button',{name:'Marcar listo'}).click();await expect(page.getByRole('button',{name:'Entregar',exact:true})).toBeVisible();
+ await expect(client.locator('.status-badge')).toHaveText('Listo');await expect(client.getByRole('region',{name:'Historial de estados'})).toContainText('Listo');
  expect(backend.calls).toEqual([{p_pedido_id:backend.row.id,p_estado_actual:'recibido',p_nuevo_estado:'preparacion'},{p_pedido_id:backend.row.id,p_estado_actual:'preparacion',p_nuevo_estado:'listo'}]);
+ await context.close();
 });
 test('rechazo de concurrencia deja el pedido visible y muestra el error',async({page})=>{
  const backend=fixture();backend.reject();await backend.install(page);await page.goto('/cocina');
