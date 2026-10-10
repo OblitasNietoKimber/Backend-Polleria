@@ -3,6 +3,8 @@
 !.env.example
 node_modules/
 dist/
+playwright-report/
+test-results/
 *.log
 
 # InsForge & AI agent skills

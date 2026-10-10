@@ -20,11 +20,11 @@ export default function DetalleVenta({ pedido }) {
         <div>
           <span className="caja-eyebrow">Detalle del pedido</span>
           <h2>{pedido.cliente}</h2>
-          <p>{pedido.id}</p>
+          <p>{pedido.codigo}</p>
         </div>
         <span className={`caja-detail-status ${pedido.estado}`}>
           {pedido.estado === "pagado" ? <CheckCircle2 size={16} /> : null}
-          {pedido.estado === "pagado" ? "Cobrado" : `Mesa ${pedido.mesa}`}
+          {pedido.estado === "pagado" ? "Cobrado" : pedido.mesa ? `Mesa ${pedido.mesa}` : pedido.tipo}
         </span>
       </div>
 
@@ -41,6 +41,7 @@ export default function DetalleVenta({ pedido }) {
         ))}
       </div>
 
+      {pedido.envio > 0 && <p>Envío: S/ {pedido.envio.toFixed(2)}</p>}
       <div className="caja-total-row">
         <span>Total</span>
         <strong className="font-mono">S/ {total.toFixed(2)}</strong>

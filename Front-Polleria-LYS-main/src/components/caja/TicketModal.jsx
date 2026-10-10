@@ -20,7 +20,7 @@ export default function TicketModal({ pedido, total, metodo, monto, vuelto, onCl
           <span><Check size={28} strokeWidth={3} /></span>
           <p>Pago completado</p>
           <h2 id="ticket-title">¡Venta registrada!</h2>
-          <small>{pedido.id} · Mesa {pedido.mesa}</small>
+          <small>{pedido.codigo} · {pedido.mesa ? `Mesa ${pedido.mesa}` : pedido.tipo}</small>
         </header>
 
         <div className="caja-receipt">
@@ -31,13 +31,17 @@ export default function TicketModal({ pedido, total, metodo, monto, vuelto, onCl
             </div>
           ))}
 
+          {pedido.envio > 0 && <div><span>Envío</span><strong>S/ {pedido.envio.toFixed(2)}</strong></div>}
           <div className="caja-receipt-total">
             <span>Total</span>
             <strong>S/ {total.toFixed(2)}</strong>
           </div>
 
           <dl>
+            <div><dt>Operación</dt><dd>{pedido.pago.id}</dd></div>
+            <div><dt>Fecha</dt><dd>{new Date(pedido.pagadoAt).toLocaleString("es-PE", { timeZone: "America/Lima" })}</dd></div>
             <div><dt>Método</dt><dd>{metodo}</dd></div>
+            {pedido.pago.referencia && <div><dt>Referencia</dt><dd>{pedido.pago.referencia}</dd></div>}
             <div><dt>Recibido</dt><dd>S/ {monto.toFixed(2)}</dd></div>
             {metodo === "Efectivo" && <div><dt>Vuelto</dt><dd>S/ {vuelto.toFixed(2)}</dd></div>}
           </dl>

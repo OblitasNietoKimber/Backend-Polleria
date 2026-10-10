@@ -65,6 +65,7 @@ export async function getMesas() {
       observaciones: pedido?.observaciones || '',
       estadoCocina: ({ recibido: 'nuevo', preparacion: 'en_preparacion', listo: 'listo' })[pedido?.estado_id] || null,
       cuentaSolicitada: Boolean(pedido?.cuenta_solicitada),
+      estadoPedido: pedido?.estado_id || null,
       totalAcumulado: Number(total.toFixed(2)),
       inicioAt: pedido?.creado_en || null,
       items: (pedido?.detalles_pedido || []).map((d) => ({

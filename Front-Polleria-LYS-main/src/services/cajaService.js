@@ -1,83 +1,7 @@
-const STORAGE_KEY = "lys_pedidos";
+import { getPedidos, getPedidosPendientes, getPedidoPorId, getVentas, calcularTotal } from './pagoService';
 
-function inicializar() {
-  const data = localStorage.getItem(STORAGE_KEY);
-  if (!data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-    return;
-  }
-
-  const pedidos = JSON.parse(data);
-  let necesitaMigrar = false;
-  const migrados = pedidos.map((pedido) => {
-    const cambios = {};
-    if (!pedido.estado) cambios.estado = pedido.estadoPago || "pendiente";
-    if (!pedido.estadoPago) cambios.estadoPago = pedido.estado || "pendiente";
-    if (!pedido.estadoCocina) cambios.estadoCocina = "nuevo";
-
-    if (Object.keys(cambios).length > 0) {
-      necesitaMigrar = true;
-      return { ...pedido, ...cambios };
-    }
-    return pedido;
-  });
-
-  if (necesitaMigrar) localStorage.setItem(STORAGE_KEY, JSON.stringify(migrados));
-}
-
-function getPedidos() {
-  inicializar();
-  return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-}
-
-function getPedidosPendientes() {
-  return getPedidos().filter((p) => p.estado === "pendiente");
-}
-
-function getPedidoPorId(id) {
-  return getPedidos().find((p) => p.id === id) || null;
-}
-
-function calcularTotal(pedido) {
-  if (Number.isFinite(Number(pedido.total))) return Number(pedido.total);
-  return pedido.items.reduce((acc, item) => acc + item.cantidad * item.precio, 0);
-}
-
-function marcarComoPagado(id, dataPago) {
-  const pedidos = getPedidos();
-  const actualizados = pedidos.map((p) =>
-    p.id === id
-      ? { ...p, estado: "pagado", estadoPago: "pagado", pago: dataPago, pagadoAt: new Date().toISOString() }
-      : p
-  );
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(actualizados));
-  window.dispatchEvent(new CustomEvent("lys_pedidos_updated"));
-
-  const pedidoPagado = actualizados.find((p) => p.id === id);
-  if (pedidoPagado && pedidoPagado.mesa) {
-    try {
-      const rawMesas = localStorage.getItem("lys_mesas");
-      if (rawMesas) {
-        const mesas = JSON.parse(rawMesas);
-        const mesaNum = String(pedidoPagado.mesa).padStart(2, "0");
-        const mesasActualizadas = mesas.map((m) =>
-          String(m.numero).padStart(2, "0") === mesaNum
-            ? { ...m, estado: "libre", pedidoId: null, inicioAt: null, totalAcumulado: 0 }
-            : m
-        );
-        localStorage.setItem("lys_mesas", JSON.stringify(mesasActualizadas));
-        window.dispatchEvent(new Event("lys_mesas_updated"));
-      }
-    } catch (e) {
-      console.error("Error al liberar mesa tras pago:", e);
-    }
-  }
-
-  return pedidoPagado;
-}
-
-function getVentas() {
-  return getPedidos().filter((p) => p.estado === "pagado");
+function ventasDe(pedidos) {
+  return pedidos.filter(p => p.estado === 'pagado');
 }
 
 function getFechaVenta(venta) {
@@ -133,8 +57,8 @@ function crearResumen(ventas) {
   };
 }
 
-function getResumenVentas(filtros = {}) {
-  const ventas = getVentasFiltradas(filtros);
+function getResumenVentas(filtros = {}, pedidos = []) {
+  const ventas = getVentasFiltradas(filtros, pedidos);
   const ahora = new Date();
 
   const inicioSemana = inicioDelDia(new Date(ahora));
@@ -150,14 +74,14 @@ function getResumenVentas(filtros = {}) {
   };
 }
 
-function getVentasFiltradas(filtros = {}) {
-  return filtrarVentasPorFecha(getVentas(), filtros.fechaInicio, filtros.fechaFin);
+function getVentasFiltradas(filtros = {}, pedidos = []) {
+  return filtrarVentasPorFecha(ventasDe(pedidos), filtros.fechaInicio, filtros.fechaFin);
 }
 
-function getProductosMasVendidos(filtros = {}) {
+function getProductosMasVendidos(filtros = {}, pedidos = []) {
   const productos = new Map();
 
-  getVentasFiltradas(filtros).forEach((venta) => {
+  getVentasFiltradas(filtros, pedidos).forEach((venta) => {
     venta.items.forEach((item) => {
       const actual = productos.get(item.nombre) || {
         productoId: item.id,
@@ -180,10 +104,10 @@ function getProductosMasVendidos(filtros = {}) {
   return Array.from(productos.values()).sort((a, b) => b.cantidad - a.cantidad);
 }
 
-function getVentasPorMetodoPago(filtros = {}) {
+function getVentasPorMetodoPago(filtros = {}, pedidos = []) {
   const metodos = new Map();
 
-  getVentasFiltradas(filtros).forEach((venta) => {
+  getVentasFiltradas(filtros, pedidos).forEach((venta) => {
     const metodo = venta.pago?.metodo || "Sin metodo";
     const actual = metodos.get(metodo) || {
       nombre: metodo,
@@ -201,10 +125,10 @@ function getVentasPorMetodoPago(filtros = {}) {
   return Array.from(metodos.values()).sort((a, b) => b.total - a.total);
 }
 
-function getVentasPorDia(filtros = {}) {
+function getVentasPorDia(filtros = {}, pedidos = []) {
   const dias = new Map();
 
-  getVentasFiltradas(filtros).forEach((venta) => {
+  getVentasFiltradas(filtros, pedidos).forEach((venta) => {
     const fecha = formatearFechaLocal(getFechaVenta(venta));
     const actual = dias.get(fecha) || {
       fecha,
@@ -260,8 +184,8 @@ function inicioDeSemana(fecha) {
   return copia;
 }
 
-function getTendenciasResumen() {
-  const ventas = getVentas();
+function getTendenciasResumen(pedidos = []) {
+  const ventas = ventasDe(pedidos);
   const ahora = new Date();
   const inicioHoy = inicioDelDia(ahora);
   const finHoy = finDelDia(ahora);
@@ -306,8 +230,7 @@ function getTendenciasResumen() {
   };
 }
 
-function getMetricasOperativasPorDia() {
-  const pedidos = getPedidos();
+function getMetricasOperativasPorDia(pedidos = []) {
   const dias = crearRangoDias(5);
   const agrupadas = new Map(
     dias.map((fecha) => [
@@ -347,8 +270,8 @@ function getMetricasOperativasPorDia() {
   };
 }
 
-function getHistorialVentas(filtros = {}) {
-  return getVentasFiltradas(filtros)
+function getHistorialVentas(filtros = {}, pedidos = []) {
+  return getVentasFiltradas(filtros, pedidos)
     .map((venta) => ({
       ...venta,
       total: calcularTotal(venta),
@@ -361,7 +284,6 @@ export default {
   getPedidosPendientes,
   getPedidoPorId,
   calcularTotal,
-  marcarComoPagado,
   getVentas,
   getResumenVentas,
   getVentasFiltradas,

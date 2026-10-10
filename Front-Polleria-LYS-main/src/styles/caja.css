@@ -799,7 +799,11 @@
 
 .caja-receipt dt,
 .caja-receipt dd { margin: 0; }
-.caja-receipt dd { color: #382f29; font-weight: 700; }
+.caja-receipt dd { color: #382f29; font-weight: 700; overflow-wrap: anywhere; text-align: right; min-width: 0; }
+
+.caja-error { margin: 16px 0; padding: 12px; color: #912520; background: #fff0ef; border-radius: 8px; }
+.caja-refresh-button { margin-bottom: 16px; padding: 10px 14px; border: 1px solid #d9d0c7; border-radius: 8px; background: white; cursor: pointer; }
+.caja-page button:disabled { opacity: 0.55; cursor: wait; }
 
 .caja-modal-actions {
   padding: 20px 26px 26px;
