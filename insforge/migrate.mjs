@@ -1,5 +1,12 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+const args = process.argv.slice(2);
+const application = args.includes('--application');
+const fromIndex = args.indexOf('--from');
+const from = fromIndex >= 0 ? args[fromIndex + 1] : '';
+if (fromIndex >= 0 && (!from || !/^\d{14}(?:[a-zA-Z0-9_.-]*)$/.test(from))) throw new Error('Indica el nombre o prefijo de migración después de --from.');
+const allowed = new Set(['--application','--from',from]);
+if (args.some(arg => !allowed.has(arg))) throw new Error('Opciones: --application --from <nombre o prefijo>.');
 const url = process.env.INSFORGE_URL;
 const key = process.env.INSFORGE_API_KEY;
 if (!url || !key) throw new Error('Define INSFORGE_URL e INSFORGE_API_KEY solo en el entorno del administrador.');
@@ -16,8 +23,8 @@ async function sql(query) {
 await sql(`CREATE SCHEMA IF NOT EXISTS lys_private;
   REVOKE ALL ON SCHEMA lys_private FROM PUBLIC,anon,authenticated;
   CREATE TABLE IF NOT EXISTS lys_private.migraciones(nombre text PRIMARY KEY, sha256 text NOT NULL, aplicado_en timestamptz NOT NULL DEFAULT now());`);
-const directory = new URL('./migrations/', import.meta.url);
-for (const name of (await readdir(directory)).filter(name => name.endsWith('.sql')).sort()) {
+const directory = new URL(application ? '../migrations/' : './migrations/', import.meta.url);
+for (const name of (await readdir(directory)).filter(name => name.endsWith('.sql') && (!from || name >= from)).sort()) {
   const source = await readFile(new URL(name, directory), 'utf8');
   const digest = createHash('sha256').update(source).digest('hex');
   const existing = (await sql(`SELECT sha256 FROM lys_private.migraciones WHERE nombre=${quote(name)}`)).rows?.[0];

@@ -1,4 +1,6 @@
 import "../styles/cocina.css";
+import { useCallback, useState } from 'react';
+import useOrderResource from '../hooks/useOrderResource';
 import cocinaService from "../services/cocinaService";
 import CocinaNavLateral from "../components/cocina/CocinaNavLateral";
 import PedidosFinalizados from "../components/cocina/PedidosFinalizados";
@@ -17,7 +19,10 @@ function dentroDeDias(fechaISO, dias) {
 }
 
 export default function HistorialCocinaPage() {
-  const finalizados = cocinaService.getPedidosFinalizados();
+  const [page, setPage] = useState(0);
+  const load = useCallback(() => cocinaService.getPedidosFinalizados({ page }), [page]);
+  const { data, loading, error, recargar } = useOrderResource(load);
+  const finalizados = data || [];
   const deHoy = finalizados.filter((p) => esHoy(p.finalizadoAt));
   const ultimos30 = finalizados.filter(
     (p) => !esHoy(p.finalizadoAt) && dentroDeDias(p.finalizadoAt, 30)
@@ -33,6 +38,13 @@ export default function HistorialCocinaPage() {
             <h1 className="font-display cocina-page-title">Historial de pedidos</h1>
           </div>
 
+          {loading && <p role="status">Cargando historial...</p>}
+          {error && <div role="alert"><p>{error}</p><button onClick={recargar}>Reintentar</button></div>}
+          <nav className="cocina-paginacion" aria-label="Páginas del historial">
+            <button disabled={page === 0} onClick={() => setPage(value => value - 1)}>Anterior</button>
+            <span>Página {page + 1}</span>
+            <button disabled={finalizados.length < 50} onClick={() => setPage(value => value + 1)}>Siguiente</button>
+          </nav>
           <section className="cocina-history-section">
             <h2 className="cocina-seccion-titulo">Hoy ({deHoy.length})</h2>
             <PedidosFinalizados pedidos={deHoy} />

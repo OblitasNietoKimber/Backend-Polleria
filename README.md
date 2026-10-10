@@ -50,3 +50,4 @@ El catálogo conectado a PostgreSQL y sus trece commits se describen en [la revi
 Los pedidos online del cliente, sus importes de servidor, permisos e historial se describen en [la revisión de pedidos](docs/pedidos-cliente.md). Las nuevas migraciones están en `migrations/` y se aplican con la CLI de InsForge sobre el backend seleccionado.
 
 Caja y pagos, los comprobantes persistidos, la liberación de mesas tras el cobro y las pruebas se describen en [la revisión de caja](docs/caja-pagos.md). Esta funcionalidad necesita aplicar las tres migraciones de caja incluidas en `migrations/`; la revisión indica cuáles y su estado de aplicación.
+

@@ -63,6 +63,7 @@ export async function getMesas() {
       ordenCodigo: pedido ? pedido.codigo : null,
       comensales: pedido?.comensales || m.capacidad,
       observaciones: pedido?.observaciones || '',
+      estadoCocina: ({ recibido: 'nuevo', preparacion: 'en_preparacion', listo: 'listo' })[pedido?.estado_id] || null,
       cuentaSolicitada: Boolean(pedido?.cuenta_solicitada),
       estadoPedido: pedido?.estado_id || null,
       totalAcumulado: Number(total.toFixed(2)),

@@ -8,17 +8,14 @@ export function useTiempoTranscurrido(inicio, congelarEn) {
   );
 
   useEffect(() => {
-    if (congelarEn) {
-      setAhora(new Date(congelarEn).getTime());
-      return;
-    }
+    if (congelarEn) return;
     const intervalo = setInterval(() => setAhora(Date.now()), 1000);
     return () => clearInterval(intervalo);
   }, [congelarEn]);
 
   const segundosTotales = Math.max(
     0,
-    Math.floor((ahora - new Date(inicio).getTime()) / 1000)
+    Math.floor(((congelarEn ? new Date(congelarEn).getTime() : ahora) - new Date(inicio).getTime()) / 1000)
   );
   const minutos = Math.floor(segundosTotales / 60);
   const segundos = segundosTotales % 60;

@@ -15,6 +15,7 @@ export default function MesaDetalleModal({ mesa, onClose, onMesaUpdated }) {
 
   const pedidoActivo = mesa?.pedidoId ? { items: mesa.items, estadoCocina: mesa.estadoPedido } : null;
 
+
   if (!mesa) return null;
 
   const { numero, capacidad, estado, inicioAt, totalAcumulado, horaReserva } = mesa;
